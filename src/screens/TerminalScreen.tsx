@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ScrollView,
   Alert,
   Modal,
+  PanResponder,
+  Animated,
 } from "react-native";
 import { useApp } from "../context/AppContext";
 import { ApiService } from "../services/api";
@@ -39,6 +41,121 @@ interface TerminalScreenProps {
 const safeToFixed = (val: any, decimals = 2): string => {
   const num = Number(val);
   return isNaN(num) ? "0.00" : num.toFixed(decimals);
+};
+
+interface SwipeableWatchlistItemProps {
+  item: any;
+  quote?: any;
+  onPress: () => void;
+  onOpenChart: () => void;
+  onRemove: () => void;
+}
+
+const SwipeableWatchlistItem: React.FC<SwipeableWatchlistItemProps> = ({
+  item,
+  quote,
+  onPress,
+  onOpenChart,
+  onRemove,
+}) => {
+  const pan = useRef(new Animated.ValueXY()).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dx > 15 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx > 0) {
+          pan.setValue({ x: Math.min(gestureState.dx, 120), y: 0 });
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 70) {
+          Animated.spring(pan, { toValue: { x: 90, y: 0 }, useNativeDriver: false }).start();
+          Alert.alert(
+            "Delete Scrip",
+            `Are you sure you want to remove ${item.tradingSymbol || item.scripRefKey} from your watchlist?`,
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => {
+                  Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+                },
+              },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => {
+                  Animated.timing(pan, { toValue: { x: 400, y: 0 }, duration: 200, useNativeDriver: false }).start(() => {
+                    onRemove();
+                  });
+                },
+              },
+            ]
+          );
+        } else {
+          Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+        }
+      },
+    })
+  ).current;
+
+  const ltp = quote?.ltp ?? 0;
+  const change = quote?.change ?? 0;
+  const changePct = quote?.changePct ?? 0;
+  const isUp = change >= 0;
+
+  return (
+    <View style={styles.swipeContainer}>
+      <View style={styles.swipeBackground}>
+        <Trash2 size={16} color="#ffffff" style={{ marginRight: 6 }} />
+        <Text style={styles.swipeText}>Swipe to Delete</Text>
+      </View>
+
+      <Animated.View
+        style={[styles.scripRowCard, { transform: [{ translateX: pan.x }] }]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity
+          style={styles.scripRowTouch}
+          activeOpacity={0.85}
+          onPress={onPress}
+        >
+          <View style={styles.scripTitleCol}>
+            <Text style={styles.scripSymbol} numberOfLines={1}>
+              {item.scripRefKey || item.tradingSymbol}
+            </Text>
+            <Text style={styles.scripSubtitle} numberOfLines={1}>
+              {item.exchange} • {item.segment} • Lot: {item.lotSize || 1}
+            </Text>
+          </View>
+
+          <View style={styles.scripRightGroup}>
+            <TouchableOpacity
+              style={styles.iconActionBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                onOpenChart();
+              }}
+            >
+              <BarChart2 size={15} color="#38bdf8" />
+            </TouchableOpacity>
+
+            <View style={styles.scripPriceCol}>
+              <Text style={styles.scripLtp}>
+                ₹{ltp > 0 ? safeToFixed(ltp) : "--.--"}
+              </Text>
+              <Text style={[styles.scripChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
+                {isUp ? `+${safeToFixed(change)} (${safeToFixed(changePct)}%)` : `${safeToFixed(change)} (${safeToFixed(changePct)}%)`}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
 };
 
 export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) => {
@@ -227,66 +344,18 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
           data={watchlist}
           keyExtractor={(item, idx) => String(item.scriptToken || item.tradingSymbol || idx)}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const quote = quotes[item.scriptToken] || quotes[item.tradingSymbol] || quotes[item.scripRefKey];
-            const ltp = quote?.ltp ?? 0;
-            const change = quote?.change ?? 0;
-            const changePct = quote?.changePct ?? 0;
-            const isUp = change >= 0;
-
-            return (
-              <View style={styles.scripCard}>
-                <View style={styles.scripHeader}>
-                  <View style={styles.scripTitleCol}>
-                    <Text style={styles.scripSymbol}>
-                      {item.scripRefKey || item.tradingSymbol}
-                    </Text>
-                    <Text style={styles.scripSubtitle}>
-                      {item.exchange} • {item.segment}
-                    </Text>
-                  </View>
-
-                  <View style={styles.scripPriceCol}>
-                    <Text style={styles.scripLtp}>
-                      ₹{ltp > 0 ? safeToFixed(ltp) : "--.--"}
-                    </Text>
-                    <Text style={[styles.scripChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
-                      {isUp ? `+${safeToFixed(change)} (${safeToFixed(changePct)}%)` : `${safeToFixed(change)} (${safeToFixed(changePct)}%)`}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Quick Action buttons */}
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    style={styles.buyBtn}
-                    onPress={() => handleOpenOrder(item, "BUY")}
-                  >
-                    <Text style={styles.buyBtnText}>BUY</Text>
-                  </TouchableOpacity>
-
-
-
-                  <TouchableOpacity
-                    style={styles.chartBtn}
-                    onPress={() => handleOpenChart(item)}
-                  >
-                    <BarChart2 size={16} color="#38bdf8" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => {
-                      removeFromWatchlist(item.scriptToken);
-                      showToast(`${item.tradingSymbol || item.scripRefKey} removed from watchlist`, "info");
-                    }}
-                  >
-                    <Trash2 size={16} color="#f43f5e" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          }}
+          renderItem={({ item }) => (
+            <SwipeableWatchlistItem
+              item={item}
+              quote={quotes[item.scriptToken] || quotes[item.tradingSymbol] || quotes[item.scripRefKey]}
+              onPress={() => handleOpenOrder(item, "BUY")}
+              onOpenChart={() => handleOpenChart(item)}
+              onRemove={() => {
+                removeFromWatchlist(item.scriptToken);
+                showToast(`${item.tradingSymbol || item.scripRefKey} removed from watchlist`, "info");
+              }}
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Zap size={36} color="#334155" />
@@ -418,19 +487,21 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
             keyExtractor={(item, idx) => String(item.scriptToken || item.tradingSymbol || idx)}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <View style={styles.scripCard}>
-                <View style={styles.scripHeader}>
-                  <View style={styles.scripTitleCol}>
-                    <Text style={styles.scripSymbol}>
-                      {item.scripRefKey || item.tradingSymbol}
-                    </Text>
-                    <Text style={styles.scripSubtitle}>
-                      {item.exchange} • {item.segment} • Lot: {item.lotSize}
-                    </Text>
-                  </View>
+              <TouchableOpacity
+                style={styles.scripRowCard}
+                activeOpacity={0.7}
+                onPress={() => handleOpenOrder(item, "BUY")}
+              >
+                <View style={styles.scripTitleCol}>
+                  <Text style={styles.scripSymbol} numberOfLines={1}>
+                    {item.scripRefKey || item.tradingSymbol}
+                  </Text>
+                  <Text style={styles.scripSubtitle} numberOfLines={1}>
+                    {item.exchange} • {item.segment} • Lot: {item.lotSize}
+                  </Text>
                 </View>
 
-                <View style={styles.cardActions}>
+                <View style={styles.scripRightGroup}>
                   <TouchableOpacity
                     style={styles.addWatchlistBtn}
                     onPress={() => {
@@ -438,20 +509,11 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
                       showToast(`${item.tradingSymbol || item.scripRefKey} added to watchlist`, "success");
                     }}
                   >
-                    <Plus size={16} color="#06b6d4" />
-                    <Text style={styles.addWatchlistText}>Add Watchlist</Text>
+                    <Plus size={15} color="#06b6d4" />
+                    <Text style={styles.addWatchlistText}>Add</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.buyBtn}
-                    onPress={() => handleOpenOrder(item, "BUY")}
-                  >
-                    <Text style={styles.buyBtnText}>BUY</Text>
-                  </TouchableOpacity>
-
-
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
           />
         </View>
@@ -579,67 +641,129 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   listContent: {
-    padding: 12,
-    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
   },
   scripCard: {
     backgroundColor: "#0f172a",
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#1e293b",
-    padding: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   scripHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 4,
+  },
+  scripRowCard: {
+    backgroundColor: "#0f172a",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#1e293b",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  swipeContainer: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 8,
+    marginBottom: 0,
+  },
+  swipeBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 120,
+    backgroundColor: "#dc2626",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  swipeText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  scripRowTouch: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flex: 1,
   },
   scripTitleCol: {
     flex: 1,
+    marginRight: 8,
   },
   scripSymbol: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
     color: "#f8fafc",
   },
   scripSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748b",
-    marginTop: 2,
+    marginTop: 1,
+  },
+  scripRightGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   scripPriceCol: {
     alignItems: "flex-end",
   },
   scripLtp: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
     color: "#f8fafc",
   },
   scripChange: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    marginTop: 2,
+    marginTop: 1,
+  },
+  inlineActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconActionBtn: {
+    padding: 5,
+    borderRadius: 6,
+    backgroundColor: "#1e293b",
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardActions: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: 8,
-    marginTop: 6,
-    paddingTop: 8,
+    marginTop: 4,
+    paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.05)",
   },
   buyBtn: {
     backgroundColor: "#10b981",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 5,
   },
   buyBtnText: {
     color: "#090d16",
     fontWeight: "800",
-    fontSize: 12,
+    fontSize: 11,
   },
   sellBtn: {
     backgroundColor: "#f43f5e",
