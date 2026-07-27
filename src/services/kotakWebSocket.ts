@@ -673,8 +673,10 @@ export class KotakLiveFeed {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempt = 0;
   private maxReconnectDelay = 30000;
+  private maxReconnectAttempts = 50;
   private _connected = false;
   private _intentionalClose = false;
+  private _reconnecting = false;
 
   // Track what's currently subscribed for re-subscribe after reconnect
   private subscribedScrips: Map<string, Instrument> = new Map(); // key: "exchange|token"
@@ -765,19 +767,31 @@ export class KotakLiveFeed {
   // ── Internal ──────────────────────────────────────────────────────────────
 
   private _connect(): void {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      return;
+    // Clean up any existing socket before creating a new one
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        try { this.ws.close(); } catch { /* ignore */ }
+      }
+      this.ws = null;
+      this.hsWrapper.setWebSocket(null);
     }
 
+    this._reconnecting = false;
+
     try {
-      console.log("[KotakLiveFeed] Connecting to", WEBSOCKET_URL);
+      if (this.reconnectAttempt === 0 || this.reconnectAttempt % 10 === 0) {
+        console.log(`[KotakLiveFeed] Connecting to ${WEBSOCKET_URL} (attempt ${this.reconnectAttempt + 1})`);
+      }
       this.ws = new WebSocket(WEBSOCKET_URL);
       this.ws.binaryType = "arraybuffer";
       this.hsWrapper.setWebSocket(this.ws);
 
       this.ws.onopen = () => {
         console.log("[KotakLiveFeed] WebSocket opened, sending auth...");
-        // Send binary connection request
         const connReq = buildConnectionRequest(this.credentials.accessToken, this.credentials.sid);
         this.ws!.send(connReq);
       };
@@ -786,22 +800,26 @@ export class KotakLiveFeed {
         this._handleMessage(event);
       };
 
-      this.ws.onerror = (event: Event) => {
-        console.error("[KotakLiveFeed] WebSocket error:", event);
+      this.ws.onerror = () => {
+        // Only log concise message; onclose will fire after this and handle reconnect
+        if (this.reconnectAttempt === 0 || this.reconnectAttempt % 10 === 0) {
+          console.warn(`[KotakLiveFeed] WebSocket error (attempt ${this.reconnectAttempt + 1})`);
+        }
       };
 
       this.ws.onclose = () => {
-        console.log("[KotakLiveFeed] WebSocket closed");
         this._setConnected(false);
         this._stopHeartbeat();
 
-        if (!this._intentionalClose) {
+        if (!this._intentionalClose && !this._reconnecting) {
+          this._reconnecting = true;
           this._scheduleReconnect();
         }
       };
     } catch (err) {
       console.error("[KotakLiveFeed] Failed to create WebSocket:", err);
-      if (!this._intentionalClose) {
+      if (!this._intentionalClose && !this._reconnecting) {
+        this._reconnecting = true;
         this._scheduleReconnect();
       }
     }
@@ -900,12 +918,21 @@ export class KotakLiveFeed {
     this._stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        // The SDK sends a JSON heartbeat: {"type": "hb"}
-        // But the HSWebSocket actually converts this to a binary format via hs_send.
-        // For the market feed (HSWebSocket), the connection stays alive via ACK mechanism.
-        // The heartbeat is only needed for the order feed (HSIWebSocket).
-        // The market feed uses binary ACK keepalive which is already handled in parseData.
-        // So we just check if connection is alive.
+        // Send a minimal binary ping to keep the connection alive.
+        // If the socket has silently died, this will trigger onerror/onclose.
+        try {
+          const ping = new Uint8Array([0, 1, BinRespTypes.ACK_TYPE]);
+          this.ws.send(ping);
+        } catch {
+          // Socket is dead — trigger reconnect
+          console.warn("[KotakLiveFeed] Heartbeat send failed, reconnecting...");
+          this._setConnected(false);
+          this._stopHeartbeat();
+          if (!this._intentionalClose && !this._reconnecting) {
+            this._reconnecting = true;
+            this._scheduleReconnect();
+          }
+        }
       }
     }, 29000);
   }
@@ -919,8 +946,17 @@ export class KotakLiveFeed {
 
   private _scheduleReconnect(): void {
     if (this.reconnectTimer) return;
+
+    if (this.reconnectAttempt >= this.maxReconnectAttempts) {
+      console.error(`[KotakLiveFeed] Max reconnect attempts (${this.maxReconnectAttempts}) reached. Giving up. Call connect() to retry.`);
+      this._reconnecting = false;
+      return;
+    }
+
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempt), this.maxReconnectDelay);
-    console.log(`[KotakLiveFeed] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt + 1})...`);
+    if (this.reconnectAttempt < 5 || this.reconnectAttempt % 10 === 0) {
+      console.log(`[KotakLiveFeed] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt + 1})...`);
+    }
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.reconnectAttempt++;
