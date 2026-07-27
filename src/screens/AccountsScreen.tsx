@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Alert,
+  Switch,
 } from "react-native";
 import { useApp } from "../context/AppContext";
 import { ApiService } from "../services/api";
@@ -32,6 +33,8 @@ export const AccountsScreen: React.FC = () => {
     upstoxConnected,
     upstoxAuthUrl,
     refreshUpstoxStatus,
+    settings,
+    updateSettings,
   } = useApp();
 
   const [accountModalVisible, setAccountModalVisible] = useState(false);
@@ -158,29 +161,44 @@ export const AccountsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Upstox Integration Card */}
-      <View style={styles.upstoxCard}>
-        <View style={styles.upstoxHeader}>
-          <View style={styles.upstoxTitleRow}>
-            <ShieldCheck size={20} color="#38bdf8" />
-            <Text style={styles.upstoxTitle}>Upstox Live Stream & Chart</Text>
-          </View>
-          <View
-            style={[
-              styles.upstoxStatusBadge,
-              { backgroundColor: upstoxConnected ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)" },
-            ]}
-          >
-            <Text style={[styles.upstoxStatusText, { color: upstoxConnected ? "#10b981" : "#f43f5e" }]}>
-              {upstoxConnected ? "Connected" : "Disconnected"}
-            </Text>
-          </View>
+      {/* Ultra-Compact System Control Bar */}
+      <View style={styles.compactControlBar}>
+        <View style={styles.compactToggleItem}>
+          <Text style={styles.compactToggleLabel}>Auto Replicate</Text>
+          <Switch
+            value={settings.autoReplicate}
+            onValueChange={(val) => updateSettings({ autoReplicate: val })}
+            trackColor={{ false: "#334155", true: "#0284c7" }}
+            thumbColor={settings.autoReplicate ? "#38bdf8" : "#94a3b8"}
+            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
+          />
         </View>
 
-        <TouchableOpacity style={styles.upstoxConfigBtn} onPress={() => setUpstoxModalVisible(true)}>
-          <Key size={16} color="#090d16" />
-          <Text style={styles.upstoxConfigText}>
-            {upstoxConnected ? "Manage Upstox API Keys" : "Connect Upstox API"}
+        <View style={styles.compactDivider} />
+
+        <View style={styles.compactToggleItem}>
+          <Text style={styles.compactToggleLabel}>Auto TOTP</Text>
+          <Switch
+            value={settings.autoRenewSessions}
+            onValueChange={(val) => updateSettings({ autoRenewSessions: val })}
+            trackColor={{ false: "#334155", true: "#0284c7" }}
+            thumbColor={settings.autoRenewSessions ? "#38bdf8" : "#94a3b8"}
+            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
+          />
+        </View>
+
+        <View style={styles.compactDivider} />
+
+        <TouchableOpacity
+          style={[
+            styles.compactUpstoxBtn,
+            { backgroundColor: upstoxConnected ? "rgba(16, 185, 129, 0.15)" : "rgba(56, 189, 248, 0.15)" },
+          ]}
+          onPress={() => setUpstoxModalVisible(true)}
+        >
+          <Key size={12} color={upstoxConnected ? "#10b981" : "#38bdf8"} />
+          <Text style={[styles.compactUpstoxText, { color: upstoxConnected ? "#10b981" : "#38bdf8" }]}>
+            {upstoxConnected ? "Upstox Keys" : "Upstox Keys"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -382,52 +400,45 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#10b981",
   },
-  upstoxCard: {
+  compactControlBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#0f172a",
-    margin: 12,
-    borderRadius: 12,
+    marginHorizontal: 12,
+    marginTop: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#1e293b",
-    padding: 14,
-  },
-  upstoxHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  upstoxTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  upstoxTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#f8fafc",
-  },
-  upstoxStatusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  compactToggleItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  compactToggleLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#cbd5e1",
+  },
+  compactDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "#1e293b",
+  },
+  compactUpstoxBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: 6,
   },
-  upstoxStatusText: {
+  compactUpstoxText: {
     fontSize: 11,
     fontWeight: "800",
-  },
-  upstoxConfigBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#38bdf8",
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  upstoxConfigText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#090d16",
   },
   sectionHeader: {
     flexDirection: "row",

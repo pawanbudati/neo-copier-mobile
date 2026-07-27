@@ -49,7 +49,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <View style={styles.indexChip}>
         <Text style={styles.indexName}>{name}</Text>
         {ltp !== undefined && ltp > 0 ? (
-          <View style={styles.indexPriceRow}>
+          <View style={styles.indexDetailsCol}>
             <Text style={styles.indexLtp}>₹{ltp.toFixed(2)}</Text>
             <Text style={[styles.indexChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
               {isUp ? `+${change.toFixed(2)}` : change.toFixed(2)} ({isUp ? `+${changePct.toFixed(2)}` : changePct.toFixed(2)}%)
@@ -120,39 +120,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </View>
 
       {/* Live Market Indices Ticker Bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.indicesBar}
-      >
+      <View style={styles.indicesBarContainer}>
         {renderIndexChip("NIFTY 50", ["Nifty 50", "NIFTY", "NIFTY50", "26000"])}
         <View style={styles.indexDivider} />
         {renderIndexChip("SENSEX", ["SENSEX", "Sensex", "1"])}
-      </ScrollView>
-
-      {/* Control Switches Bar */}
-      <View style={styles.controlBar}>
-        <View style={styles.toggleItem}>
-          <Text style={[styles.toggleLabel, isLightTheme && styles.textLightSubtle]}>Auto Replicate</Text>
-          <Switch
-            value={settings.autoReplicate}
-            onValueChange={(val) => updateSettings({ autoReplicate: val })}
-            trackColor={{ false: "#334155", true: "#0284c7" }}
-            thumbColor={settings.autoReplicate ? "#38bdf8" : "#94a3b8"}
-          />
-        </View>
-
-        <View style={styles.toggleDivider} />
-
-        <View style={styles.toggleItem}>
-          <Text style={[styles.toggleLabel, isLightTheme && styles.textLightSubtle]}>Auto TOTP</Text>
-          <Switch
-            value={settings.autoRenewSessions}
-            onValueChange={(val) => updateSettings({ autoRenewSessions: val })}
-            trackColor={{ false: "#334155", true: "#0284c7" }}
-            thumbColor={settings.autoRenewSessions ? "#38bdf8" : "#94a3b8"}
-          />
-        </View>
       </View>
     </View>
   );
@@ -266,50 +237,57 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#1e293b",
   },
-  indicesBar: {
+  indicesBarContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-around",
     marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     backgroundColor: "rgba(30, 41, 59, 0.4)",
     borderRadius: 8,
   },
   indexChip: {
-    flexDirection: "row",
+    flex: 1,
+    flexDirection: "column",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   indexName: {
     fontSize: 10,
     fontWeight: "800",
     color: "#94a3b8",
     letterSpacing: 0.5,
+    marginBottom: 2,
+    textAlign: "center",
   },
-  indexPriceRow: {
-    flexDirection: "row",
+  indexDetailsCol: {
+    flexDirection: "column",
     alignItems: "center",
-    gap: 4,
+    gap: 1,
   },
   indexLtp: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     color: "#f8fafc",
+    textAlign: "center",
   },
   indexChange: {
     fontSize: 10,
     fontWeight: "700",
+    textAlign: "center",
   },
   indexLoading: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#64748b",
+    textAlign: "center",
   },
   indexDivider: {
     width: 1,
-    height: 14,
+    height: 36,
     backgroundColor: "#334155",
+    alignSelf: "center",
   },
   controlBar: {
     flexDirection: "row",

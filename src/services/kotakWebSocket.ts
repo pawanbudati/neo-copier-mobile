@@ -629,7 +629,7 @@ function parseNum(v: string | number | null | undefined): number {
 }
 
 function normalizeTick(raw: Record<string, string>): NormalizedTick | null {
-  const token = raw.tk || raw.instrument_token || "";
+  const token = raw.tk || raw.name || raw.ts || raw.instrument_token || "";
   if (!token) return null;
 
   // For indices: ltp field is "iv"; for scrips: ltp field is "ltp"

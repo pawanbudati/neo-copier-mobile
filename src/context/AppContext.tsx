@@ -302,11 +302,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const lookupInstrument = useCallback((token: string) => {
-    if (token === "Nifty 50" || token === "NIFTY" || token === "26000") {
-      return { exchange_segment: "nse_cm", instrument_token: "26000", isIndex: true };
+    if (token === "Nifty 50" || token === "NIFTY" || token === "26000" || token === "NIFTY 50") {
+      return { exchange_segment: "nse_cm", instrument_token: "Nifty 50", isIndex: true };
     }
     if (token === "SENSEX" || token === "Sensex" || token === "1") {
-      return { exchange_segment: "bse_cm", instrument_token: "1", isIndex: true };
+      return { exchange_segment: "bse_cm", instrument_token: "SENSEX", isIndex: true };
     }
 
     const watchItem = watchlist.find((w) => w.scriptToken === token);
@@ -360,13 +360,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               next[tick.token] = qData;
 
               // Index alias mapping
-              if (tick.token === "26000") {
+              if (tick.token === "Nifty 50" || tick.token === "26000" || tick.token === "NIFTY") {
                 next["Nifty 50"] = qData;
                 next["NIFTY"] = qData;
                 next["NIFTY50"] = qData;
-              } else if (tick.token === "1") {
+                next["26000"] = qData;
+              } else if (tick.token === "SENSEX" || tick.token === "1" || tick.token === "Sensex") {
                 next["SENSEX"] = qData;
                 next["Sensex"] = qData;
+                next["1"] = qData;
               }
               return next;
             });
