@@ -160,7 +160,7 @@ export const AccountsScreen: React.FC = () => {
       {/* Accounts List */}
       <FlatList
         data={accounts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, idx) => String(item.id || item.ucc || idx)}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isMaster = item.role === "master";

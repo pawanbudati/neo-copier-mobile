@@ -108,7 +108,7 @@ export const OrdersScreen: React.FC = () => {
         <FlatList
           horizontal
           data={["ALL", "SUCCESS", "FAILED", "PENDING", "CANCELLED"]}
-          keyExtractor={(item) => item}
+          keyExtractor={(item, idx) => String(item || idx)}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterChipRow}
           renderItem={({ item }) => (
@@ -127,10 +127,11 @@ export const OrdersScreen: React.FC = () => {
       {/* Orders List */}
       <FlatList
         data={filteredOrders}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, idx) => String(item.id || idx)}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isBuy = item.transactionType === "BUY";
+          const priceNum = Number(item.price);
 
           return (
             <View style={styles.orderCard}>
@@ -166,7 +167,7 @@ export const OrdersScreen: React.FC = () => {
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Price</Text>
                   <Text style={styles.detailVal}>
-                    {item.price > 0 ? `₹${item.price.toFixed(2)}` : "MARKET"}
+                    {!isNaN(priceNum) && priceNum > 0 ? `₹${priceNum.toFixed(2)}` : "MARKET"}
                   </Text>
                 </View>
 

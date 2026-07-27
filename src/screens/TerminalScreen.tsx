@@ -30,6 +30,11 @@ interface TerminalScreenProps {
   navigation: any;
 }
 
+const safeToFixed = (val: any, decimals = 2): string => {
+  const num = Number(val);
+  return isNaN(num) ? "0.00" : num.toFixed(decimals);
+};
+
 export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) => {
   const {
     watchlist,
@@ -80,47 +85,40 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
   };
 
   const handleSquareOffSingle = async (pos: Position) => {
-    Alert.alert(
-      "Square Off Position",
-      `Are you sure you want to square off ${pos.symbol}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Square Off",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await ApiService.squareOffPosition(pos.symbol);
-              await refreshPositions();
-            } catch (e: any) {
-              Alert.alert("Error", e?.message || "Failed to square off position.");
-            }
-          },
+    Alert.alert("Square Off", `Square off open position for ${pos.symbol}?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Square Off",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await ApiService.squareOffPosition(pos.symbol, pos.accountId, pos.netQty);
+            await refreshPositions();
+          } catch (e: any) {
+            Alert.alert("Square Off Failed", e?.message || "Could not square off position.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleSquareOffAll = async () => {
-    Alert.alert(
-      "EMERGENCY SQUARE OFF ALL",
-      "Are you sure you want to square off ALL open positions across all accounts?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "SQUARE OFF ALL",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await ApiService.squareOffAllPositions();
-              await refreshPositions();
-            } catch (e: any) {
-              Alert.alert("Error", e?.message || "Failed to square off positions.");
-            }
-          },
+    Alert.alert("Emergency Square Off", "Square off ALL open positions across all master & slave accounts?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Square Off All",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await ApiService.squareOffAllPositions();
+            await refreshPositions();
+            Alert.alert("Square Off Triggered", "Emergency exit order broadcasted.");
+          } catch (e: any) {
+            Alert.alert("Square Off Failed", e?.message || "Could not square off all positions.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -165,7 +163,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
       {activeTab === "watchlist" && (
         <FlatList
           data={watchlist}
-          keyExtractor={(item) => item.scriptToken || item.tradingSymbol}
+          keyExtractor={(item, idx) => String(item.scriptToken || item.tradingSymbol || idx)}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => {
             const quote = quotes[item.scriptToken];
@@ -188,10 +186,10 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
 
                   <View style={styles.scripPriceCol}>
                     <Text style={styles.scripLtp}>
-                      ₹{ltp > 0 ? ltp.toFixed(2) : "--.--"}
+                      ₹{ltp > 0 ? safeToFixed(ltp) : "--.--"}
                     </Text>
                     <Text style={[styles.scripChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
-                      {isUp ? `+${change.toFixed(2)} (${changePct.toFixed(2)}%)` : `${change.toFixed(2)} (${changePct.toFixed(2)}%)`}
+                      {isUp ? `+${safeToFixed(change)} (${safeToFixed(changePct)}%)` : `${safeToFixed(change)} (${safeToFixed(changePct)}%)`}
                     </Text>
                   </View>
                 </View>
@@ -245,8 +243,8 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
           <View style={styles.positionsSummaryHeader}>
             <View>
               <Text style={styles.summaryLabel}>Total Net MTM</Text>
-              <Text style={[styles.summaryVal, { color: totalPnl >= 0 ? "#10b981" : "#f43f5e" }]}>
-                {totalPnl >= 0 ? `+₹${totalPnl.toFixed(2)}` : `-₹${Math.abs(totalPnl).toFixed(2)}`}
+              <Text style={[styles.summaryVal, { color: (totalPnl || 0) >= 0 ? "#10b981" : "#f43f5e" }]}>
+                {(totalPnl || 0) >= 0 ? `+₹${safeToFixed(totalPnl)}` : `-₹${safeToFixed(Math.abs(totalPnl || 0))}`}
               </Text>
             </View>
 
@@ -260,28 +258,30 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
 
           <FlatList
             data={positions}
-            keyExtractor={(item, idx) => item.symbol + idx}
+            keyExtractor={(item, idx) => String(item.symbol || item.tradingSymbol || idx) + "-" + idx}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
               const liveLtp = quotes[item.symbol]?.ltp || item.actvLtp || item.ltp || 0;
-              const unrealized = item.netQty !== 0 ? (liveLtp - item.buyAvg) * item.netQty : 0;
-              const itemTotalPnl = (item.realizedPnl || 0) + unrealized;
+              const buyAvg = Number(item.buyAvg) || 0;
+              const netQty = Number(item.netQty) || 0;
+              const unrealized = netQty !== 0 ? (liveLtp - buyAvg) * netQty : 0;
+              const itemTotalPnl = (Number(item.realizedPnl) || 0) + unrealized;
               const isProfit = itemTotalPnl >= 0;
 
               return (
                 <View style={styles.scripCard}>
                   <View style={styles.scripHeader}>
                     <View style={styles.scripTitleCol}>
-                      <Text style={styles.scripSymbol}>{item.symbol}</Text>
+                      <Text style={styles.scripSymbol}>{item.symbol || item.tradingSymbol || "Position"}</Text>
                       <Text style={styles.scripSubtitle}>
-                        Qty: {item.netQty} • Avg: ₹{item.buyAvg.toFixed(2)}
+                        Qty: {netQty} • Avg: ₹{safeToFixed(buyAvg)}
                       </Text>
                     </View>
 
                     <View style={styles.scripPriceCol}>
-                      <Text style={styles.scripLtp}>₹{liveLtp.toFixed(2)}</Text>
+                      <Text style={styles.scripLtp}>₹{safeToFixed(liveLtp)}</Text>
                       <Text style={[styles.scripChange, { color: isProfit ? "#10b981" : "#f43f5e" }]}>
-                        {isProfit ? `+₹${itemTotalPnl.toFixed(2)}` : `-₹${Math.abs(itemTotalPnl).toFixed(2)}`}
+                        {isProfit ? `+₹${safeToFixed(itemTotalPnl)}` : `-₹${safeToFixed(Math.abs(itemTotalPnl))}`}
                       </Text>
                     </View>
                   </View>
@@ -333,7 +333,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
 
           <FlatList
             data={searchResults}
-            keyExtractor={(item) => item.scriptToken || item.tradingSymbol}
+            keyExtractor={(item, idx) => String(item.scriptToken || item.tradingSymbol || idx)}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <View style={styles.scripCard}>

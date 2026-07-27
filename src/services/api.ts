@@ -137,24 +137,38 @@ export const ApiService = {
 
   // Positions
   async getPositions(): Promise<Position[]> {
-    return request<Position[]>("/api/positions");
+    const data = await request<any>("/api/accounts/positions");
+    if (!Array.isArray(data)) return [];
+    const allPositions: Position[] = [];
+    for (const item of data) {
+      if (item && Array.isArray(item.positions)) {
+        allPositions.push(...item.positions);
+      } else if (item && (item.symbol || item.tradingSymbol || item.netQty !== undefined)) {
+        allPositions.push(item);
+      }
+    }
+    return allPositions;
   },
 
-  async squareOffPosition(symbol: string): Promise<any> {
-    return request<any>(`/api/positions/square-off/${encodeURIComponent(symbol)}`, {
+  async squareOffPosition(symbol: string, accountId?: string, quantity?: number): Promise<any> {
+    return request<any>("/api/positions/exit", {
       method: "POST",
+      body: JSON.stringify({ symbol, accountId, quantity }),
     });
   },
 
   async squareOffAllPositions(): Promise<any> {
-    return request<any>("/api/positions/square-off-all", {
+    return request<any>("/api/positions/exit-all", {
       method: "POST",
     });
   },
 
   // Scrips & Search
   async searchScrips(query: string): Promise<any[]> {
-    return request<any[]>(`/api/scrips/search?q=${encodeURIComponent(query)}`);
+    const data = await request<any>(`/api/search?q=${encodeURIComponent(query)}`);
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
   },
 
   async getScripCategories(): Promise<any[]> {

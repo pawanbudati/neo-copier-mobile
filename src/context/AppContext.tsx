@@ -67,9 +67,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Total MTM P&L calculated from positions
   const totalPnl = positions.reduce((acc, pos) => {
-    const liveLtp = quotes[pos.symbol]?.ltp || pos.actvLtp || pos.ltp || 0;
-    const unrealized = pos.netQty !== 0 ? (liveLtp - pos.buyAvg) * pos.netQty : 0;
-    return acc + (pos.realizedPnl || 0) + unrealized;
+    if (!pos) return acc;
+    const liveLtp = Number(quotes[pos.symbol]?.ltp || pos.actvLtp || pos.ltp) || 0;
+    const buyAvg = Number(pos.buyAvg) || 0;
+    const netQty = Number(pos.netQty) || 0;
+    const realizedPnl = Number(pos.realizedPnl) || 0;
+    const unrealized = netQty !== 0 ? (liveLtp - buyAvg) * netQty : 0;
+    const pnl = realizedPnl + unrealized;
+    return acc + (isNaN(pnl) ? 0 : pnl);
   }, 0);
 
   const updateServerUrl = async (url: string) => {

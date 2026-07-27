@@ -10,7 +10,9 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenServerConfig }) => {
   const { isConnected, isConnecting, totalPnl, settings, updateSettings } = useApp();
 
-  const formattedPnl = totalPnl.toLocaleString("en-IN", {
+  const safePnl = typeof totalPnl === "number" && !isNaN(totalPnl) ? totalPnl : 0;
+  const isPositive = safePnl >= 0;
+  const formattedPnl = Math.abs(safePnl).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -37,12 +39,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenServerConfig }) => {
           <View
             style={[
               styles.pnlBadge,
-              { backgroundColor: totalPnl >= 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)" },
+              { backgroundColor: isPositive ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)" },
             ]}
           >
-            <Text style={[styles.pnlLabel, { color: totalPnl >= 0 ? "#10b981" : "#f43f5e" }]}>MTM P&L</Text>
-            <Text style={[styles.pnlValue, { color: totalPnl >= 0 ? "#10b981" : "#f43f5e" }]}>
-              {totalPnl >= 0 ? `+₹${formattedPnl}` : `-₹${Math.abs(totalPnl).toFixed(2)}`}
+            <Text style={[styles.pnlLabel, { color: isPositive ? "#10b981" : "#f43f5e" }]}>MTM P&L</Text>
+            <Text style={[styles.pnlValue, { color: isPositive ? "#10b981" : "#f43f5e" }]}>
+              {isPositive ? `+₹${formattedPnl}` : `-₹${formattedPnl}`}
             </Text>
           </View>
 
