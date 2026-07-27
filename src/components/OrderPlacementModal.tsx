@@ -151,43 +151,24 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
           </View>
 
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
-            {/* BUY / SELL Switcher */}
+            {/* BUY Indicator */}
             <View style={styles.sideSelector}>
-              <TouchableOpacity
+              <View
                 style={[
                   styles.sideBtn,
-                  transactionType === "BUY" && { backgroundColor: "#10b981" },
+                  { backgroundColor: "#10b981", flex: 1 },
                 ]}
-                onPress={() => setTransactionType("BUY")}
               >
-                <TrendingUp size={16} color={transactionType === "BUY" ? "#090d16" : "#10b981"} />
+                <TrendingUp size={16} color="#090d16" />
                 <Text
                   style={[
                     styles.sideText,
-                    transactionType === "BUY" && { color: "#090d16", fontWeight: "900" },
+                    { color: "#090d16", fontWeight: "900" },
                   ]}
                 >
-                  BUY
+                  BUY ORDER
                 </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.sideBtn,
-                  transactionType === "SELL" && { backgroundColor: "#f43f5e" },
-                ]}
-                onPress={() => setTransactionType("SELL")}
-              >
-                <TrendingDown size={16} color={transactionType === "SELL" ? "#090d16" : "#f43f5e"} />
-                <Text
-                  style={[
-                    styles.sideText,
-                    transactionType === "SELL" && { color: "#090d16", fontWeight: "900" },
-                  ]}
-                >
-                  SELL
-                </Text>
-              </TouchableOpacity>
+              </View>
             </View>
 
             {/* Symbol & Segment */}

@@ -224,17 +224,6 @@ export const LiveChartScreen: React.FC<any> = ({ route, navigation }) => {
           <TrendingUp size={18} color="#090d16" />
           <Text style={styles.tradeText}>QUICK BUY</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.sellBtn}
-          onPress={() => {
-            setOrderSide("SELL");
-            setOrderModalVisible(true);
-          }}
-        >
-          <TrendingDown size={18} color="#090d16" />
-          <Text style={styles.tradeText}>QUICK SELL</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Order Ticket Modal */}

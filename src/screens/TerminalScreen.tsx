@@ -265,12 +265,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
                     <Text style={styles.buyBtnText}>BUY</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.sellBtn}
-                    onPress={() => handleOpenOrder(item, "SELL")}
-                  >
-                    <Text style={styles.sellBtnText}>SELL</Text>
-                  </TouchableOpacity>
+
 
                   <TouchableOpacity
                     style={styles.chartBtn}
@@ -454,12 +449,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
                     <Text style={styles.buyBtnText}>BUY</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.sellBtn}
-                    onPress={() => handleOpenOrder(item, "SELL")}
-                  >
-                    <Text style={styles.sellBtnText}>SELL</Text>
-                  </TouchableOpacity>
+
                 </View>
               </View>
             )}
