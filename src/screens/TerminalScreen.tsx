@@ -14,6 +14,7 @@ import { useApp } from "../context/AppContext";
 import { ApiService } from "../services/api";
 import { OrderPlacementModal } from "../components/OrderPlacementModal";
 import { ScripManagerModal } from "../components/ScripManagerModal";
+import { Toast, ToastMessage, ToastType } from "../components/Toast";
 import { ScripInfo, Position } from "../types";
 import {
   Search,
@@ -59,6 +60,12 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
   const [searchResults, setSearchResults] = useState<ScripInfo[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [scripManagerVisible, setScripManagerVisible] = useState(false);
+
+  // Toast notification state
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const showToast = (text: string, type: ToastType = "success") => {
+    setToast({ id: Date.now().toString(), text, type });
+  };
 
   // Order modal state
   const [selectedScripForOrder, setSelectedScripForOrder] = useState<ScripInfo | null>(null);
@@ -274,7 +281,10 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
 
                   <TouchableOpacity
                     style={styles.deleteBtn}
-                    onPress={() => removeFromWatchlist(item.scriptToken)}
+                    onPress={() => {
+                      removeFromWatchlist(item.scriptToken);
+                      showToast(`${item.tradingSymbol || item.scripRefKey} removed from watchlist`, "info");
+                    }}
                   >
                     <Trash2 size={16} color="#f43f5e" />
                   </TouchableOpacity>
@@ -430,7 +440,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
                     style={styles.addWatchlistBtn}
                     onPress={() => {
                       addToWatchlist(item);
-                      Alert.alert("Added", `${item.tradingSymbol} added to watchlist.`);
+                      showToast(`${item.tradingSymbol || item.scripRefKey} added to watchlist`, "success");
                     }}
                   >
                     <Plus size={16} color="#06b6d4" />
@@ -529,6 +539,9 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
           </View>
         </Modal>
       )}
+
+      {/* Toast Notification Banner */}
+      <Toast toast={toast} onHide={() => setToast(null)} />
     </View>
   );
 };
