@@ -85,6 +85,16 @@ export const AccountsScreen: React.FC = () => {
     }
   };
 
+  const handleLoginAll = async () => {
+    try {
+      await ApiService.loginAllAccounts();
+      await refreshAccounts();
+      Alert.alert("Auto Auth", "TOTP login triggered for all accounts.");
+    } catch (e: any) {
+      Alert.alert("Login Failed", e?.message || "Could not authenticate accounts.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Stats Summary Bar */}
@@ -134,11 +144,17 @@ export const AccountsScreen: React.FC = () => {
 
       {/* Account Header & Action */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Kotak Neo Trading Accounts</Text>
-        <TouchableOpacity style={styles.addAccountBtn} onPress={handleOpenAdd}>
-          <UserPlus size={16} color="#090d16" />
-          <Text style={styles.addAccountText}>Add Account</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Kotak Accounts</Text>
+        <View style={styles.headerBtnGroup}>
+          <TouchableOpacity style={styles.loginAllBtn} onPress={handleLoginAll}>
+            <Zap size={14} color="#38bdf8" />
+            <Text style={styles.loginAllText}>Login All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addAccountBtn} onPress={handleOpenAdd}>
+            <UserPlus size={14} color="#090d16" />
+            <Text style={styles.addAccountText}>Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Accounts List */}
@@ -327,11 +343,32 @@ const styles = StyleSheet.create({
   addAccountBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     backgroundColor: "#06b6d4",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
+  },
+  headerBtnGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  loginAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    borderWidth: 1,
+    borderColor: "#38bdf8",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  loginAllText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#38bdf8",
   },
   addAccountText: {
     fontSize: 12,

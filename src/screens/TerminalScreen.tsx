@@ -12,6 +12,7 @@ import {
 import { useApp } from "../context/AppContext";
 import { ApiService } from "../services/api";
 import { OrderPlacementModal } from "../components/OrderPlacementModal";
+import { ScripManagerModal } from "../components/ScripManagerModal";
 import { ScripInfo, Position } from "../types";
 import {
   Search,
@@ -22,6 +23,7 @@ import {
   BarChart2,
   Zap,
   RotateCcw,
+  Database,
 } from "lucide-react-native";
 
 interface TerminalScreenProps {
@@ -43,6 +45,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ScripInfo[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [scripManagerVisible, setScripManagerVisible] = useState(false);
 
   // Order modal state
   const [selectedScripForOrder, setSelectedScripForOrder] = useState<ScripInfo | null>(null);
@@ -148,6 +151,13 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
         >
           <Search size={14} color={activeTab === "search" ? "#06b6d4" : "#94a3b8"} />
           <Text style={[styles.tabText, activeTab === "search" && styles.activeTabText]}>Search</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.scripMgrTabItem}
+          onPress={() => setScripManagerVisible(true)}
+        >
+          <Database size={15} color="#06b6d4" />
         </TouchableOpacity>
       </View>
 
@@ -377,6 +387,12 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
         initialSide={orderSide}
         onClose={() => setOrderModalVisible(false)}
       />
+
+      {/* Scrip Master Manager Modal */}
+      <ScripManagerModal
+        visible={scripManagerVisible}
+        onClose={() => setScripManagerVisible(false)}
+      />
     </View>
   );
 };
@@ -404,6 +420,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
+  },
+  scripMgrTabItem: {
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(6, 182, 212, 0.1)",
   },
   activeTabItem: {
     borderBottomColor: "#06b6d4",

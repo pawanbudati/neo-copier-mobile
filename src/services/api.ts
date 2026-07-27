@@ -7,7 +7,7 @@ export const STORAGE_KEYS = {
   WATCHLIST: "@neo_copier_watchlist",
 };
 
-export const DEFAULT_SERVER_URL = "http://10.0.2.2:8080";
+export const DEFAULT_SERVER_URL = "http://192.168.0.195:3000";
 
 let currentServerUrl = DEFAULT_SERVER_URL;
 
@@ -16,6 +16,8 @@ export async function initServerUrl(): Promise<string> {
     const saved = await AsyncStorage.getItem(STORAGE_KEYS.SERVER_URL);
     if (saved && saved.trim()) {
       currentServerUrl = saved.trim().replace(/\/+$/, "");
+    } else {
+      currentServerUrl = DEFAULT_SERVER_URL;
     }
   } catch (e) {
     console.warn("Failed to load server URL from storage", e);
@@ -169,6 +171,37 @@ export const ApiService = {
     });
   },
 
+  async loginAllAccounts(): Promise<any> {
+    return request<any>("/api/accounts/login-all", {
+      method: "POST",
+    });
+  },
+
+  async retryOrder(orderId: string): Promise<any> {
+    return request<any>(`/api/orders/${orderId}/retry`, {
+      method: "POST",
+    });
+  },
+
+  async loadDailyOptions(): Promise<any> {
+    return request<any>("/api/scrips/load-daily-options", {
+      method: "POST",
+    });
+  },
+
+  async loadScripCategory(category: string): Promise<any> {
+    return request<any>("/api/scrips/load", {
+      method: "POST",
+      body: JSON.stringify({ category }),
+    });
+  },
+
+  async clearScrips(): Promise<any> {
+    return request<any>("/api/scrips/clear", {
+      method: "POST",
+    });
+  },
+
   // Settings
   async getSettings(): Promise<AppSettings> {
     return request<AppSettings>("/api/settings");
@@ -188,6 +221,12 @@ export const ApiService = {
 
   async getLogs(): Promise<SystemLog[]> {
     return request<SystemLog[]>("/api/logs");
+  },
+
+  async clearLogs(): Promise<any> {
+    return request<any>("/api/logs/clear", {
+      method: "POST",
+    });
   },
 
   // Chart OHLC Data

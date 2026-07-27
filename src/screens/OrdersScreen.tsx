@@ -47,6 +47,16 @@ export const OrdersScreen: React.FC = () => {
     }
   };
 
+  const handleRetryOrder = async (orderId: string) => {
+    try {
+      await ApiService.retryOrder(orderId);
+      await refreshOrders();
+      Alert.alert("Retry Triggered", "Slave order re-execution requested.");
+    } catch (e: any) {
+      Alert.alert("Retry Failed", e?.message || "Could not retry order.");
+    }
+  };
+
   const renderStatusBadge = (status: TradeOrder["status"]) => {
     switch (status) {
       case "SUCCESS":
@@ -177,15 +187,26 @@ export const OrdersScreen: React.FC = () => {
                 </View>
               )}
 
-              {item.status === "PENDING" && (
+              {(item.status === "PENDING" || item.status === "FAILED") && (
                 <View style={styles.cardFooter}>
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={() => handleCancelOrder(item.id)}
-                  >
-                    <Ban size={14} color="#f43f5e" />
-                    <Text style={styles.cancelText}>Cancel Order</Text>
-                  </TouchableOpacity>
+                  {item.status === "FAILED" && (
+                    <TouchableOpacity
+                      style={styles.retryBtn}
+                      onPress={() => handleRetryOrder(item.id)}
+                    >
+                      <RotateCcw size={14} color="#38bdf8" />
+                      <Text style={styles.retryText}>Retry Order</Text>
+                    </TouchableOpacity>
+                  )}
+                  {item.status === "PENDING" && (
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => handleCancelOrder(item.id)}
+                    >
+                      <Ban size={14} color="#f43f5e" />
+                      <Text style={styles.cancelText}>Cancel Order</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
             </View>
@@ -355,6 +376,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
+  },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    borderWidth: 1,
+    borderColor: "#38bdf8",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#38bdf8",
   },
   cancelText: {
     fontSize: 11,

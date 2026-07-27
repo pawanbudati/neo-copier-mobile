@@ -9,17 +9,16 @@ import {
 } from "react-native";
 import { useApp } from "../context/AppContext";
 import { SystemLog } from "../types";
+import { ApiService } from "../services/api";
 import {
   Terminal,
   Search,
   Pause,
   Play,
   RefreshCw,
-  Info,
-  AlertTriangle,
-  XCircle,
-  Bug,
+  Trash2,
 } from "lucide-react-native";
+import { Alert } from "react-native";
 
 export const LogsScreen: React.FC = () => {
   const { logs, refreshLogs } = useApp();
@@ -27,6 +26,24 @@ export const LogsScreen: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [paused, setPaused] = useState(false);
+
+  const handleClearLogs = async () => {
+    Alert.alert("Clear Logs", "Are you sure you want to truncate the server log file?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear Logs",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await ApiService.clearLogs();
+            await refreshLogs();
+          } catch (e: any) {
+            Alert.alert("Error", e?.message || "Failed to clear logs.");
+          }
+        },
+      },
+    ]);
+  };
 
   const filteredLogs = logs.filter((log) => {
     const matchesLevel = selectedLevel === "ALL" || log.level === selectedLevel;
@@ -94,6 +111,10 @@ export const LogsScreen: React.FC = () => {
 
           <TouchableOpacity style={styles.refreshBtn} onPress={refreshLogs}>
             <RefreshCw size={14} color="#06b6d4" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.deleteBtn} onPress={handleClearLogs}>
+            <Trash2 size={14} color="#f43f5e" />
           </TouchableOpacity>
         </View>
       </View>
@@ -192,6 +213,11 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: "#1e293b",
+  },
+  deleteBtn: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "rgba(244, 63, 94, 0.15)",
   },
   logList: {
     padding: 12,
