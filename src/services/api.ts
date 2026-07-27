@@ -15,12 +15,20 @@ export async function initServerUrl(): Promise<string> {
   try {
     const saved = await AsyncStorage.getItem(STORAGE_KEYS.SERVER_URL);
     if (saved && saved.trim()) {
-      currentServerUrl = saved.trim().replace(/\/+$/, "");
+      const clean = saved.trim().replace(/\/+$/, "");
+      if (clean.includes("10.0.2.2") || clean.includes("duckdns") || clean.includes("localhost")) {
+        currentServerUrl = DEFAULT_SERVER_URL;
+        await AsyncStorage.setItem(STORAGE_KEYS.SERVER_URL, DEFAULT_SERVER_URL);
+      } else {
+        currentServerUrl = clean;
+      }
     } else {
       currentServerUrl = DEFAULT_SERVER_URL;
+      await AsyncStorage.setItem(STORAGE_KEYS.SERVER_URL, DEFAULT_SERVER_URL);
     }
   } catch (e) {
     console.warn("Failed to load server URL from storage", e);
+    currentServerUrl = DEFAULT_SERVER_URL;
   }
   return currentServerUrl;
 }

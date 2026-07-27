@@ -14,6 +14,8 @@ import { ApiService } from "../services/api";
 import { ScripInfo } from "../types";
 import { X, Send, TrendingUp, TrendingDown } from "lucide-react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 interface OrderPlacementModalProps {
   visible: boolean;
   initialScrip?: ScripInfo | any;
@@ -27,6 +29,7 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
   initialSide = "BUY",
   onClose,
 }) => {
+  const insets = useSafeAreaInsets();
   const { accounts, refreshOrders, refreshPositions } = useApp();
 
   const [transactionType, setTransactionType] = useState<"BUY" | "SELL">(initialSide);
@@ -104,7 +107,7 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Order Ticket</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, StyleSheet, SafeAreaView, StatusBar } from "react-native";
+import { View, StyleSheet, StatusBar } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -16,9 +17,12 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function MainTabNavigator({ onOpenServerConfig }: { onOpenServerConfig: () => void }) {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 12);
+
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+    <SafeAreaView style={styles.safeContainer} edges={["top"]}>
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" translucent={false} />
       <AppHeader onOpenServerConfig={onOpenServerConfig} />
       <Tab.Navigator
         screenOptions={{
@@ -26,8 +30,8 @@ function MainTabNavigator({ onOpenServerConfig }: { onOpenServerConfig: () => vo
           tabBarStyle: {
             backgroundColor: "#0f172a",
             borderTopColor: "#1e293b",
-            height: 60,
-            paddingBottom: 8,
+            height: 56 + bottomInset,
+            paddingBottom: bottomInset,
             paddingTop: 6,
           },
           tabBarActiveTintColor: "#06b6d4",
