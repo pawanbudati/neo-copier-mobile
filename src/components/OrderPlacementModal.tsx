@@ -36,14 +36,16 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
   const [symbol, setSymbol] = useState("");
   const [tradingSymbol, setTradingSymbol] = useState("");
   const [optionType, setOptionType] = useState<"CE" | "PE" | "FUT" | "EQ">("CE");
+  const [productType, setProductType] = useState<"MIS" | "CNC" | "NRML">("MIS");
   const [strikePrice, setStrikePrice] = useState("");
   const [expiry, setExpiry] = useState("");
   const [quantity, setQuantity] = useState("15"); // Default NIFTY lot size
   const [price, setPrice] = useState("0");
   const [triggerPrice, setTriggerPrice] = useState("0");
-  const [orderType, setOrderType] = useState<"MARKET" | "LIMIT" | "SL">("MARKET");
+  const [orderType, setOrderType] = useState<"MARKET" | "LIMIT" | "SL" | "SL-M">("MARKET");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("ALL");
   const [submitting, setSubmitting] = useState(false);
+  const [estimatedMargin, setEstimatedMargin] = useState<number | null>(null);
 
   useEffect(() => {
     if (initialScrip) {
@@ -62,6 +64,37 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
     }
     setTransactionType(initialSide);
   }, [initialScrip, initialSide, visible]);
+
+  // Margin calculation effect
+  useEffect(() => {
+    if (!visible || !symbol.trim()) return;
+    const qtyNum = parseInt(quantity, 10) || 0;
+    if (qtyNum <= 0) return;
+
+    let active = true;
+    ApiService.calculateMarginRequired({
+      symbol: symbol.trim().toUpperCase(),
+      quantity: qtyNum,
+      price: parseFloat(price) || 0,
+      productType,
+      orderType,
+      transactionType,
+    })
+      .then((res) => {
+        if (active && res && typeof res.marginRequired === "number") {
+          setEstimatedMargin(res.marginRequired);
+        } else if (active && res && typeof res.margin === "number") {
+          setEstimatedMargin(res.margin);
+        }
+      })
+      .catch(() => {
+        if (active) setEstimatedMargin(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [symbol, quantity, price, productType, orderType, transactionType, visible]);
 
   const handlePlaceOrder = async () => {
     if (!symbol.trim()) {
@@ -82,6 +115,7 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
       const payload = {
         accountId: targetAccId,
         symbol: symbol.trim().toUpperCase(),
+        instrument: symbol.trim().toUpperCase(),
         tradingSymbol: tradingSymbol || symbol.trim().toUpperCase(),
         optionType,
         strikePrice: parseFloat(strikePrice) || 0,
@@ -90,13 +124,14 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
         price: parseFloat(price) || 0,
         triggerPrice: parseFloat(triggerPrice) || 0,
         orderType,
+        productType,
         transactionType,
       };
 
       await ApiService.placeOrder(payload);
       await Promise.all([refreshOrders(), refreshPositions()]);
       setSubmitting(false);
-      Alert.alert("Order Placed", `${transactionType} order for ${symbol} placed successfully!`);
+      Alert.alert("Order Placed", `${transactionType} ${productType} order for ${symbol} placed successfully!`);
       onClose();
     } catch (e: any) {
       setSubmitting(false);
@@ -181,10 +216,26 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
               ))}
             </View>
 
+            {/* Product Type */}
+            <Text style={styles.fieldLabel}>Product Type</Text>
+            <View style={styles.chipRow}>
+              {(["MIS", "CNC", "NRML"] as const).map((prod) => (
+                <TouchableOpacity
+                  key={prod}
+                  style={[styles.chip, productType === prod && styles.activeChip]}
+                  onPress={() => setProductType(prod)}
+                >
+                  <Text style={[styles.chipText, productType === prod && styles.activeChipText]}>
+                    {prod}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Order Type */}
             <Text style={styles.fieldLabel}>Order Type</Text>
             <View style={styles.chipRow}>
-              {(["MARKET", "LIMIT", "SL"] as const).map((type) => (
+              {(["MARKET", "LIMIT", "SL", "SL-M"] as const).map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[styles.chip, orderType === type && styles.activeChip]}
@@ -196,6 +247,13 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
                 </TouchableOpacity>
               ))}
             </View>
+
+            {estimatedMargin !== null && estimatedMargin > 0 && (
+              <View style={styles.marginPreviewBox}>
+                <Text style={styles.marginPreviewLabel}>Est. Margin Required:</Text>
+                <Text style={styles.marginPreviewValue}>₹{estimatedMargin.toFixed(2)}</Text>
+              </View>
+            )}
 
             {/* Quantity & Price Row */}
             <View style={styles.row}>
@@ -376,6 +434,28 @@ const styles = StyleSheet.create({
   activeChipText: {
     color: "#38bdf8",
     fontWeight: "700",
+  },
+  marginPreviewBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "rgba(6, 182, 212, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(6, 182, 212, 0.3)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+  },
+  marginPreviewLabel: {
+    fontSize: 12,
+    color: "#94a3b8",
+    fontWeight: "600",
+  },
+  marginPreviewValue: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#06b6d4",
   },
   row: {
     flexDirection: "row",

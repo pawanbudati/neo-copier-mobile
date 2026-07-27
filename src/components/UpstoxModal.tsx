@@ -17,6 +17,20 @@ export const UpstoxModal: React.FC<UpstoxModalProps> = ({ visible, onClose }) =>
   const [authCode, setAuthCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  React.useEffect(() => {
+    if (visible) {
+      ApiService.getUpstoxConfig()
+        .then((cfg) => {
+          if (cfg) {
+            if (cfg.apiKey) setApiKey(cfg.apiKey);
+            if (cfg.apiSecret) setApiSecret(cfg.apiSecret);
+            if (cfg.redirectUri) setRedirectUri(cfg.redirectUri);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [visible]);
+
   const handleSaveCredentials = async () => {
     if (!apiKey.trim() || !apiSecret.trim()) {
       Alert.alert("Missing Keys", "API Key and API Secret are required.");

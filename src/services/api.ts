@@ -1,5 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AccountSummary, AppSettings, TradeOrder, WatchlistItem, Position, SystemLog } from "../types";
+import {
+  AccountSummary,
+  AppSettings,
+  TradeOrder,
+  WatchlistItem,
+  Position,
+  SystemLog,
+  OcoRule,
+  AccountMargin,
+  SystemPower,
+} from "../types";
 
 export const STORAGE_KEYS = {
   SERVER_URL: "@neo_copier_server_url",
@@ -15,13 +25,7 @@ export async function initServerUrl(): Promise<string> {
   try {
     const saved = await AsyncStorage.getItem(STORAGE_KEYS.SERVER_URL);
     if (saved && saved.trim()) {
-      const clean = saved.trim().replace(/\/+$/, "");
-      if (clean.includes("10.0.2.2") || clean.includes("duckdns") || clean.includes("localhost")) {
-        currentServerUrl = DEFAULT_SERVER_URL;
-        await AsyncStorage.setItem(STORAGE_KEYS.SERVER_URL, DEFAULT_SERVER_URL);
-      } else {
-        currentServerUrl = clean;
-      }
+      currentServerUrl = saved.trim().replace(/\/+$/, "");
     } else {
       currentServerUrl = DEFAULT_SERVER_URL;
       await AsyncStorage.setItem(STORAGE_KEYS.SERVER_URL, DEFAULT_SERVER_URL);
@@ -67,22 +71,22 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const ApiService = {
-  // Accounts
+  // ─── Accounts ──────────────────────────────────────────────────────────────
   async getAccounts(): Promise<AccountSummary[]> {
     return request<AccountSummary[]>("/api/accounts");
   },
 
-  async addAccount(accountData: any): Promise<AccountSummary> {
-    return request<AccountSummary>("/api/accounts", {
+  async addAccount(accountData: any): Promise<any> {
+    return request<any>("/api/accounts", {
       method: "POST",
       body: JSON.stringify(accountData),
     });
   },
 
-  async updateAccount(id: string, accountData: any): Promise<AccountSummary> {
-    return request<AccountSummary>(`/api/accounts/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(accountData),
+  async updateAccount(id: string, accountData: any): Promise<any> {
+    return request<any>("/api/accounts", {
+      method: "POST",
+      body: JSON.stringify({ ...accountData, id }),
     });
   },
 
@@ -92,23 +96,42 @@ export const ApiService = {
     });
   },
 
-  async loginAccount(id: string): Promise<any> {
+  async loginAccount(id: string, manualOtp?: string): Promise<any> {
     return request<any>(`/api/accounts/${id}/login`, {
       method: "POST",
+      body: manualOtp ? JSON.stringify({ manualOtp }) : undefined,
     });
+  },
+
+  async loginAllAccounts(): Promise<any> {
+    return request<any>("/api/accounts/refresh-all", {
+      method: "POST",
+    });
+  },
+
+  async getTotpPreview(id: string): Promise<{ code?: string; error?: string }> {
+    return request<{ code?: string; error?: string }>(`/api/accounts/${id}/totp-preview`);
+  },
+
+  async getMargins(): Promise<AccountMargin[]> {
+    return request<AccountMargin[]>("/api/accounts/margins");
   },
 
   async getFeedCredentials(): Promise<{ accessToken: string; sid: string; serverId?: string; dataCenter?: string }> {
     return request<any>("/api/accounts/feed-credentials");
   },
 
-  // Upstox
+  // ─── Upstox ────────────────────────────────────────────────────────────────
   async getUpstoxStatus(): Promise<{ hasToken: boolean; authUrl?: string }> {
     return request<{ hasToken: boolean; authUrl?: string }>("/api/upstox/status");
   },
 
+  async getUpstoxConfig(): Promise<any> {
+    return request<any>("/api/upstox/config");
+  },
+
   async addUpstoxAccount(accountData: any): Promise<any> {
-    return request<any>("/api/upstox/account", {
+    return request<any>("/api/upstox/config", {
       method: "POST",
       body: JSON.stringify(accountData),
     });
@@ -121,15 +144,21 @@ export const ApiService = {
     });
   },
 
-  // Orders
+  // ─── Orders ────────────────────────────────────────────────────────────────
   async getOrders(): Promise<TradeOrder[]> {
     return request<TradeOrder[]>("/api/orders");
   },
 
   async placeOrder(orderData: any): Promise<any> {
-    return request<any>("/api/orders", {
+    return request<any>("/api/orders/replicate", {
       method: "POST",
       body: JSON.stringify(orderData),
+    });
+  },
+
+  async syncOrdersStatus(): Promise<any> {
+    return request<any>("/api/orders/sync-status", {
+      method: "POST",
     });
   },
 
@@ -139,7 +168,33 @@ export const ApiService = {
     });
   },
 
-  // Positions
+  async modifyOrder(orderId: string, orderData: any): Promise<any> {
+    return request<any>(`/api/orders/${orderId}`, {
+      method: "PUT",
+      body: JSON.stringify(orderData),
+    });
+  },
+
+  async deleteOrder(orderId: string): Promise<any> {
+    return request<any>(`/api/orders/${orderId}`, {
+      method: "DELETE",
+    });
+  },
+
+  async clearOrders(): Promise<any> {
+    return request<any>("/api/orders", {
+      method: "DELETE",
+    });
+  },
+
+  async calculateMarginRequired(payload: any): Promise<any> {
+    return request<any>("/api/orders/margin-required", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // ─── Positions & OCO Rules ──────────────────────────────────────────────────
   async getPositions(): Promise<Position[]> {
     const data = await request<any>("/api/accounts/positions");
     if (!Array.isArray(data)) return [];
@@ -167,7 +222,24 @@ export const ApiService = {
     });
   },
 
-  // Scrips & Search
+  async createOcoRule(payload: { symbol: string; targetPrice: number; stopLossPrice: number; productType?: string }): Promise<any> {
+    return request<any>("/api/positions/oco", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getActiveOcoRules(): Promise<OcoRule[]> {
+    return request<OcoRule[]>("/api/positions/oco/active");
+  },
+
+  async deleteOcoRule(ocoId: string): Promise<any> {
+    return request<any>(`/api/positions/oco/${ocoId}`, {
+      method: "DELETE",
+    });
+  },
+
+  // ─── Scrips & Search ────────────────────────────────────────────────────────
   async searchScrips(query: string): Promise<any[]> {
     const data = await request<any>(`/api/search?q=${encodeURIComponent(query)}`);
     if (Array.isArray(data)) return data;
@@ -175,52 +247,12 @@ export const ApiService = {
     return [];
   },
 
-  async getScripCategories(): Promise<any[]> {
-    return request<any[]>("/api/scrips/categories");
-  },
-
   async getScripStatus(): Promise<any> {
     return request<any>("/api/scrips/status");
   },
 
-  async getCacheStatus(): Promise<any> {
-    return request<any>("/api/scrips/cache/status");
-  },
-
-  async populateCache(): Promise<any> {
-    return request<any>("/api/scrips/cache", {
-      method: "POST",
-    });
-  },
-
-  // Watchlist
-  async getWatchlist(): Promise<WatchlistItem[]> {
-    return request<WatchlistItem[]>("/api/watchlist");
-  },
-
-  async addToWatchlist(item: any): Promise<WatchlistItem> {
-    return request<WatchlistItem>("/api/watchlist", {
-      method: "POST",
-      body: JSON.stringify(item),
-    });
-  },
-
-  async removeFromWatchlist(scriptToken: string): Promise<void> {
-    return request<void>(`/api/watchlist/${encodeURIComponent(scriptToken)}`, {
-      method: "DELETE",
-    });
-  },
-
-  async loginAllAccounts(): Promise<any> {
-    return request<any>("/api/accounts/login-all", {
-      method: "POST",
-    });
-  },
-
-  async retryOrder(orderId: string): Promise<any> {
-    return request<any>(`/api/orders/${orderId}/retry`, {
-      method: "POST",
-    });
+  async getDailySyncStatus(): Promise<any> {
+    return request<any>("/api/scrips/daily-sync-status");
   },
 
   async loadDailyOptions(): Promise<any> {
@@ -242,7 +274,35 @@ export const ApiService = {
     });
   },
 
-  // Settings
+  async getCacheStatus(): Promise<any> {
+    return request<any>("/api/scrips/cache/status");
+  },
+
+  async populateCache(): Promise<any> {
+    return request<any>("/api/scrips/cache", {
+      method: "POST",
+    });
+  },
+
+  // ─── Watchlist ─────────────────────────────────────────────────────────────
+  async getWatchlist(): Promise<WatchlistItem[]> {
+    return request<WatchlistItem[]>("/api/watchlist");
+  },
+
+  async addToWatchlist(item: any): Promise<WatchlistItem> {
+    return request<WatchlistItem>("/api/watchlist", {
+      method: "POST",
+      body: JSON.stringify(item),
+    });
+  },
+
+  async removeFromWatchlist(scriptToken: string): Promise<void> {
+    return request<void>(`/api/watchlist/${encodeURIComponent(scriptToken)}`, {
+      method: "DELETE",
+    });
+  },
+
+  // ─── Settings & Power Control ─────────────────────────────────────────────
   async getSettings(): Promise<AppSettings> {
     return request<AppSettings>("/api/settings");
   },
@@ -254,13 +314,28 @@ export const ApiService = {
     });
   },
 
-  // System & Logs
+  async getSystemPower(): Promise<SystemPower> {
+    return request<SystemPower>("/api/system/power");
+  },
+
+  async setSystemPower(active: boolean): Promise<SystemPower> {
+    return request<SystemPower>("/api/system/power", {
+      method: "POST",
+      body: JSON.stringify({ active }),
+    });
+  },
+
+  // ─── System & Logs ────────────────────────────────────────────────────────
   async getSystemStatus(): Promise<any> {
-    return request<any>("/api/system/status");
+    try {
+      return await request<any>("/api/system/status");
+    } catch (e) {
+      return await request<any>("/");
+    }
   },
 
   async getLogs(): Promise<SystemLog[]> {
-    return request<SystemLog[]>("/api/logs");
+    return request<SystemLog[]>("/api/logs?lines=500");
   },
 
   async clearLogs(): Promise<any> {
@@ -269,8 +344,20 @@ export const ApiService = {
     });
   },
 
-  // Chart OHLC Data
-  async getCandles(symbol: string, interval: string = "1m"): Promise<any[]> {
-    return request<any[]>(`/api/upstox/candles?symbol=${encodeURIComponent(symbol)}&interval=${interval}`);
+  // ─── Chart OHLC Candle History ──────────────────────────────────────────────
+  async getCandles(
+    token?: string,
+    symbol?: string,
+    exchange?: string,
+    segment?: string,
+    timeframe: string = "1m"
+  ): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (token) params.append("token", token);
+    if (symbol) params.append("symbol", symbol);
+    if (exchange) params.append("exchange", exchange);
+    if (segment) params.append("segment", segment);
+    params.append("timeframe", timeframe);
+    return request<any[]>(`/api/scrips/history?${params.toString()}`);
   },
 };

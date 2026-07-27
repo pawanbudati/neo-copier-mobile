@@ -67,10 +67,10 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
           <Text style={styles.presetLabel}>Quick Presets:</Text>
           <View style={styles.presetRow}>
             <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://192.168.0.195:3000")}>
-              <Text style={styles.presetText}>Laptop Wi-Fi (192.168.0.195:3000)</Text>
+              <Text style={styles.presetText}>LAN Wi-Fi (192.168.0.195:3000)</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("https://neo-copier.duckdns.org")}>
-              <Text style={styles.presetText}>GCP Domain (duckdns.org)</Text>
+            <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://10.0.2.2:3000")}>
+              <Text style={styles.presetText}>Android Emulator (10.0.2.2:3000)</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://localhost:3000")}>
               <Text style={styles.presetText}>Localhost (3000)</Text>

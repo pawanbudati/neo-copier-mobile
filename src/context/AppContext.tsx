@@ -7,6 +7,8 @@ import {
   Position,
   QuoteData,
   SystemLog,
+  OcoRule,
+  AccountMargin,
 } from "../types";
 import { ApiService, initServerUrl, getServerUrl, setServerUrl as saveServerUrl } from "../services/api";
 import { kotakFeed } from "../services/kotakWebSocket";
@@ -17,14 +19,25 @@ interface AppContextType {
   isConnected: boolean;
   isConnecting: boolean;
 
+  masterPowerActive: boolean;
+  toggleMasterPower: (active: boolean) => Promise<void>;
+
   accounts: AccountSummary[];
   refreshAccounts: () => Promise<void>;
+
+  margins: AccountMargin[];
+  refreshMargins: () => Promise<void>;
 
   orders: TradeOrder[];
   refreshOrders: () => Promise<void>;
 
   positions: Position[];
   refreshPositions: () => Promise<void>;
+
+  ocoRules: OcoRule[];
+  refreshOcoRules: () => Promise<void>;
+  createOcoRule: (rule: { symbol: string; targetPrice: number; stopLossPrice: number; productType?: string }) => Promise<void>;
+  deleteOcoRule: (id: string) => Promise<void>;
 
   watchlist: WatchlistItem[];
   refreshWatchlist: () => Promise<void>;
@@ -51,9 +64,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
+  const [masterPowerActive, setMasterPowerActive] = useState<boolean>(true);
   const [accounts, setAccounts] = useState<AccountSummary[]>([]);
+  const [margins, setMargins] = useState<AccountMargin[]>([]);
   const [orders, setOrders] = useState<TradeOrder[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [ocoRules, setOcoRules] = useState<OcoRule[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>({
     autoReplicate: true,
@@ -83,12 +99,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshAllData();
   };
 
+  const refreshSystemPower = useCallback(async () => {
+    try {
+      const res = await ApiService.getSystemPower();
+      if (res && typeof res.active === "boolean") {
+        setMasterPowerActive(res.active);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch system power status", e);
+    }
+  }, []);
+
+  const toggleMasterPower = async (active: boolean) => {
+    setMasterPowerActive(active);
+    try {
+      const res = await ApiService.setSystemPower(active);
+      if (res && typeof res.active === "boolean") {
+        setMasterPowerActive(res.active);
+      }
+    } catch (e) {
+      console.warn("Failed to set system power status", e);
+    }
+  };
+
   const refreshAccounts = useCallback(async () => {
     try {
       const data = await ApiService.getAccounts();
       if (Array.isArray(data)) setAccounts(data);
     } catch (e) {
       console.warn("Failed to fetch accounts", e);
+    }
+  }, []);
+
+  const refreshMargins = useCallback(async () => {
+    try {
+      const data = await ApiService.getMargins();
+      if (Array.isArray(data)) setMargins(data);
+    } catch (e) {
+      console.warn("Failed to fetch margins", e);
     }
   }, []);
 
@@ -109,6 +157,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn("Failed to fetch positions", e);
     }
   }, []);
+
+  const refreshOcoRules = useCallback(async () => {
+    try {
+      const data = await ApiService.getActiveOcoRules();
+      if (Array.isArray(data)) setOcoRules(data);
+    } catch (e) {
+      console.warn("Failed to fetch OCO rules", e);
+    }
+  }, []);
+
+  const createOcoRule = async (rule: { symbol: string; targetPrice: number; stopLossPrice: number; productType?: string }) => {
+    await ApiService.createOcoRule(rule);
+    await refreshOcoRules();
+  };
+
+  const deleteOcoRule = async (id: string) => {
+    await ApiService.deleteOcoRule(id);
+    await refreshOcoRules();
+  };
 
   const refreshWatchlist = useCallback(async () => {
     try {
@@ -186,9 +253,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await ApiService.getSystemStatus();
       setIsConnected(true);
       await Promise.all([
+        refreshSystemPower(),
         refreshAccounts(),
+        refreshMargins(),
         refreshOrders(),
         refreshPositions(),
+        refreshOcoRules(),
         refreshWatchlist(),
         refreshSettings(),
         refreshLogs(),
@@ -201,9 +271,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsConnecting(false);
     }
   }, [
+    refreshSystemPower,
     refreshAccounts,
+    refreshMargins,
     refreshOrders,
     refreshPositions,
+    refreshOcoRules,
     refreshWatchlist,
     refreshSettings,
     refreshLogs,
@@ -239,17 +312,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [watchlist, positions]);
 
-  // Periodic polling for fast updates (orders, positions, logs)
+  // Periodic polling for fast updates (orders, positions, logs, margins, power)
   useEffect(() => {
     const interval = setInterval(() => {
       if (isConnected) {
         refreshOrders();
         refreshPositions();
+        refreshMargins();
+        refreshOcoRules();
         refreshLogs();
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [isConnected, refreshOrders, refreshPositions, refreshLogs]);
+  }, [isConnected, refreshOrders, refreshPositions, refreshMargins, refreshOcoRules, refreshLogs]);
 
   // Kotak WebSocket tick listener
   useEffect(() => {
@@ -285,12 +360,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateServerUrl,
         isConnected,
         isConnecting,
+        masterPowerActive,
+        toggleMasterPower,
         accounts,
         refreshAccounts,
+        margins,
+        refreshMargins,
         orders,
         refreshOrders,
         positions,
         refreshPositions,
+        ocoRules,
+        refreshOcoRules,
+        createOcoRule,
+        deleteOcoRule,
         watchlist,
         refreshWatchlist,
         addToWatchlist,

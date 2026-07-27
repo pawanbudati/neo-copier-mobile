@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Modal,
 } from "react-native";
 import { useApp } from "../context/AppContext";
 import { ApiService } from "../services/api";
@@ -24,6 +25,10 @@ import {
   Zap,
   RotateCcw,
   Database,
+  Target,
+  ShieldAlert,
+  X,
+  Check,
 } from "lucide-react-native";
 
 interface TerminalScreenProps {
@@ -40,6 +45,9 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
     watchlist,
     positions,
     quotes,
+    ocoRules,
+    createOcoRule,
+    deleteOcoRule,
     addToWatchlist,
     removeFromWatchlist,
     refreshPositions,
@@ -56,6 +64,53 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
   const [selectedScripForOrder, setSelectedScripForOrder] = useState<ScripInfo | null>(null);
   const [orderSide, setOrderSide] = useState<"BUY" | "SELL">("BUY");
   const [orderModalVisible, setOrderModalVisible] = useState(false);
+
+  // OCO Modal state
+  const [ocoModalVisible, setOcoModalVisible] = useState(false);
+  const [selectedPosForOco, setSelectedPosForOco] = useState<Position | null>(null);
+  const [targetPrice, setTargetPrice] = useState("");
+  const [stopLossPrice, setStopLossPrice] = useState("");
+  const [submittingOco, setSubmittingOco] = useState(false);
+
+  const handleOpenOcoModal = (pos: Position) => {
+    setSelectedPosForOco(pos);
+    const existingRule = ocoRules.find((r) => r.symbol === pos.symbol);
+    if (existingRule) {
+      setTargetPrice(String(existingRule.targetPrice));
+      setStopLossPrice(String(existingRule.stopLossPrice));
+    } else {
+      const liveLtp = quotes[pos.symbol]?.ltp || pos.actvLtp || pos.ltp || pos.buyAvg || 0;
+      setTargetPrice(liveLtp > 0 ? (liveLtp * 1.02).toFixed(2) : "0");
+      setStopLossPrice(liveLtp > 0 ? (liveLtp * 0.98).toFixed(2) : "0");
+    }
+    setOcoModalVisible(true);
+  };
+
+  const handleSaveOco = async () => {
+    if (!selectedPosForOco) return;
+    const tgt = parseFloat(targetPrice);
+    const sl = parseFloat(stopLossPrice);
+    if (isNaN(tgt) || tgt <= 0 || isNaN(sl) || sl <= 0) {
+      Alert.alert("Invalid Prices", "Please enter valid Target & Stop Loss prices.");
+      return;
+    }
+
+    setSubmittingOco(true);
+    try {
+      await createOcoRule({
+        symbol: selectedPosForOco.symbol,
+        targetPrice: tgt,
+        stopLossPrice: sl,
+        productType: selectedPosForOco.productType || "MIS",
+      });
+      setSubmittingOco(false);
+      setOcoModalVisible(false);
+      Alert.alert("OCO Rule Active", `Target (₹${tgt}) & Stop-Loss (₹${sl}) set for ${selectedPosForOco.symbol}.`);
+    } catch (e: any) {
+      setSubmittingOco(false);
+      Alert.alert("OCO Error", e?.message || "Could not set OCO rule.");
+    }
+  };
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -267,6 +322,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
               const unrealized = netQty !== 0 ? (liveLtp - buyAvg) * netQty : 0;
               const itemTotalPnl = (Number(item.realizedPnl) || 0) + unrealized;
               const isProfit = itemTotalPnl >= 0;
+              const existingOco = ocoRules.find((r) => r.symbol === item.symbol);
 
               return (
                 <View style={styles.scripCard}>
@@ -286,6 +342,19 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
                     </View>
                   </View>
 
+                  {/* Active OCO Badge */}
+                  {existingOco && (
+                    <View style={styles.ocoBadgeRow}>
+                      <Target size={13} color="#06b6d4" />
+                      <Text style={styles.ocoBadgeText}>
+                        OCO Target: ₹{existingOco.targetPrice} | SL: ₹{existingOco.stopLossPrice}
+                      </Text>
+                      <TouchableOpacity onPress={() => deleteOcoRule(existingOco.id)} style={styles.deleteOcoBtn}>
+                        <X size={12} color="#f43f5e" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
                   <View style={styles.cardActions}>
                     <TouchableOpacity
                       style={styles.chartBtnFlex}
@@ -293,6 +362,14 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
                     >
                       <BarChart2 size={16} color="#38bdf8" />
                       <Text style={styles.chartBtnText}>Chart</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.ocoBtnFlex}
+                      onPress={() => handleOpenOcoModal(item)}
+                    >
+                      <Target size={15} color="#06b6d4" />
+                      <Text style={styles.ocoBtnText}>OCO Target/SL</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -393,6 +470,65 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
         visible={scripManagerVisible}
         onClose={() => setScripManagerVisible(false)}
       />
+
+      {/* OCO Rule Modal */}
+      {selectedPosForOco && (
+        <Modal
+          visible={ocoModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setOcoModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleRow}>
+                  <Target size={18} color="#06b6d4" />
+                  <Text style={styles.modalTitle}>Set OCO Target / Stop Loss</Text>
+                </View>
+                <TouchableOpacity onPress={() => setOcoModalVisible(false)}>
+                  <X size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.modalSubText}>
+                Symbol: {selectedPosForOco.symbol} • Qty: {selectedPosForOco.netQty}
+              </Text>
+
+              <Text style={styles.inputLabel}>Target Price (₹)</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={targetPrice}
+                onChangeText={setTargetPrice}
+                keyboardType="numeric"
+                placeholder="Target Price"
+                placeholderTextColor="#64748b"
+              />
+
+              <Text style={styles.inputLabel}>Stop Loss Price (₹)</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={stopLossPrice}
+                onChangeText={setStopLossPrice}
+                keyboardType="numeric"
+                placeholder="Stop Loss Price"
+                placeholderTextColor="#64748b"
+              />
+
+              <TouchableOpacity
+                style={styles.saveOcoBtn}
+                onPress={handleSaveOco}
+                disabled={submittingOco}
+              >
+                <Check size={16} color="#090d16" />
+                <Text style={styles.saveOcoText}>
+                  {submittingOco ? "Saving Rule..." : "Activate OCO Rule"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -589,6 +725,44 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#38bdf8",
   },
+  ocoBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(6, 182, 212, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(6, 182, 212, 0.3)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginVertical: 6,
+  },
+  ocoBadgeText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#06b6d4",
+  },
+  deleteOcoBtn: {
+    padding: 3,
+  },
+  ocoBtnFlex: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(6, 182, 212, 0.15)",
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#06b6d4",
+  },
+  ocoBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#06b6d4",
+  },
   squareOffSingleBtn: {
     backgroundColor: "rgba(244, 63, 94, 0.2)",
     borderWidth: 1,
@@ -601,6 +775,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#f43f5e",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: "#0f172a",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#1e293b",
+    padding: 18,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  modalTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#f8fafc",
+  },
+  modalSubText: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  modalInput: {
+    backgroundColor: "#1e293b",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#334155",
+    color: "#f8fafc",
+    paddingHorizontal: 12,
+    height: 42,
+    fontSize: 14,
+  },
+  saveOcoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#06b6d4",
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  saveOcoText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#090d16",
   },
   searchBarContainer: {
     flexDirection: "row",

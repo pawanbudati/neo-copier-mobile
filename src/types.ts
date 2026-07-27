@@ -31,7 +31,8 @@ export interface TradeOrder {
   expiry: string;
   quantity: number;
   price: number;
-  orderType: "MARKET" | "LIMIT" | "SL";
+  orderType: "MARKET" | "LIMIT" | "SL" | "SL-M";
+  productType?: "MIS" | "CNC" | "NRML";
   triggerPrice?: number;
   transactionType: "BUY" | "SELL";
   status: "SUCCESS" | "FAILED" | "PENDING" | "CANCELLED";
@@ -87,6 +88,30 @@ export interface Position {
   ltp?: number;
   accountName?: string;
   accountId?: string;
+  productType?: string;
+}
+
+export interface OcoRule {
+  id: string;
+  symbol: string;
+  targetPrice: number;
+  stopLossPrice: number;
+  productType: string;
+  createdAt?: string;
+}
+
+export interface AccountMargin {
+  accountId?: string;
+  accountName?: string;
+  cash?: number;
+  totalMargin?: number;
+  availableMargin?: number;
+  usedMargin?: number;
+  marginUsed?: number;
+}
+
+export interface SystemPower {
+  active: boolean;
 }
 
 export interface ScripCategory {
@@ -106,3 +131,4 @@ export interface SystemLog {
   message: string;
   source?: string;
 }
+

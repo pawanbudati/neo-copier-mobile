@@ -34,7 +34,10 @@ export const LiveChartScreen: React.FC<any> = ({ route, navigation }) => {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    ApiService.getCandles(symbol, timeframe)
+    const token = scrip?.scriptToken || "";
+    const exch = scrip?.exchange || "";
+    const seg = scrip?.segment || "";
+    ApiService.getCandles(token, symbol, exch, seg, timeframe)
       .then((data) => {
         if (active && Array.isArray(data)) {
           setCandles(data);
@@ -51,7 +54,7 @@ export const LiveChartScreen: React.FC<any> = ({ route, navigation }) => {
     return () => {
       active = false;
     };
-  }, [symbol, timeframe]);
+  }, [scrip, symbol, timeframe]);
 
   // Inject live quote updates into WebView
   useEffect(() => {

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from "react-native";
 import { useApp } from "../context/AppContext";
-import { Server, Zap, Sun, Moon } from "lucide-react-native";
+import { Server, Zap, Sun, Moon, Power } from "lucide-react-native";
 
 interface AppHeaderProps {
   onOpenServerConfig: () => void;
@@ -14,7 +14,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isLightTheme = false,
   onToggleTheme,
 }) => {
-  const { isConnected, isConnecting, totalPnl, settings, updateSettings, quotes } = useApp();
+  const {
+    isConnected,
+    isConnecting,
+    totalPnl,
+    settings,
+    updateSettings,
+    quotes,
+    masterPowerActive,
+    toggleMasterPower,
+  } = useApp();
 
   const safePnl = typeof totalPnl === "number" && !isNaN(totalPnl) ? totalPnl : 0;
   const isPositive = safePnl >= 0;
@@ -73,6 +82,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </View>
 
         <View style={styles.rightActions}>
+          <TouchableOpacity
+            style={[
+              styles.powerButton,
+              masterPowerActive ? styles.powerButtonActive : styles.powerButtonInactive,
+            ]}
+            onPress={() => toggleMasterPower(!masterPowerActive)}
+          >
+            <Power size={16} color={masterPowerActive ? "#10b981" : "#f43f5e"} />
+            <Text style={[styles.powerText, { color: masterPowerActive ? "#10b981" : "#f43f5e" }]}>
+              {masterPowerActive ? "ACTIVE" : "PAUSED"}
+            </Text>
+          </TouchableOpacity>
+
           <View
             style={[
               styles.pnlBadge,
@@ -201,6 +223,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  powerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  powerButtonActive: {
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderColor: "rgba(16, 185, 129, 0.3)",
+  },
+  powerButtonInactive: {
+    backgroundColor: "rgba(244, 63, 94, 0.12)",
+    borderColor: "rgba(244, 63, 94, 0.3)",
+  },
+  powerText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   pnlBadge: {
     paddingHorizontal: 10,

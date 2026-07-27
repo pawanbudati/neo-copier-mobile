@@ -27,6 +27,8 @@ export const AccountsScreen: React.FC = () => {
   const {
     accounts,
     refreshAccounts,
+    margins,
+    refreshMargins,
     upstoxConnected,
     upstoxAuthUrl,
     refreshUpstoxStatus,
@@ -39,6 +41,10 @@ export const AccountsScreen: React.FC = () => {
 
   const masterCount = accounts.filter((a) => a.role === "master").length;
   const slaveCount = accounts.filter((a) => a.role === "slave").length;
+
+  const totalMarginSum = margins.reduce((acc, m) => acc + (Number(m.totalMargin || m.cash) || 0), 0);
+  const availMarginSum = margins.reduce((acc, m) => acc + (Number(m.availableMargin) || 0), 0);
+  const usedMarginSum = margins.reduce((acc, m) => acc + (Number(m.usedMargin || m.marginUsed) || 0), 0);
 
   const handleOpenAdd = () => {
     setEditingAccount(null);
@@ -85,6 +91,19 @@ export const AccountsScreen: React.FC = () => {
     }
   };
 
+  const handleTotpPreview = async (acc: AccountSummary) => {
+    try {
+      const res = await ApiService.getTotpPreview(acc.id);
+      if (res && res.code) {
+        Alert.alert("Live TOTP Code", `Current 6-digit TOTP Code for ${acc.nickname}:\n\n${res.code}`);
+      } else {
+        Alert.alert("TOTP Preview", res.error || "Could not generate TOTP code.");
+      }
+    } catch (e: any) {
+      Alert.alert("TOTP Error", e?.message || "TOTP secret not found.");
+    }
+  };
+
   const handleLoginAll = async () => {
     try {
       await ApiService.loginAllAccounts();
@@ -114,6 +133,30 @@ export const AccountsScreen: React.FC = () => {
           <Text style={styles.statLabel}>Slaves</Text>
         </View>
       </View>
+
+      {/* Margins Summary Header */}
+      {margins.length > 0 && (
+        <View style={styles.marginsCard}>
+          <View style={styles.marginCol}>
+            <Text style={styles.marginSubLabel}>Total Cash</Text>
+            <Text style={styles.marginVal}>₹{totalMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</Text>
+          </View>
+          <View style={styles.marginDivider} />
+          <View style={styles.marginCol}>
+            <Text style={styles.marginSubLabel}>Available</Text>
+            <Text style={[styles.marginVal, { color: "#10b981" }]}>
+              ₹{availMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+            </Text>
+          </View>
+          <View style={styles.marginDivider} />
+          <View style={styles.marginCol}>
+            <Text style={styles.marginSubLabel}>Used Margin</Text>
+            <Text style={[styles.marginVal, { color: "#f59e0b" }]}>
+              ₹{usedMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Upstox Integration Card */}
       <View style={styles.upstoxCard}>
@@ -216,6 +259,16 @@ export const AccountsScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
 
+                {item.hasAutoTotpSecret && (
+                  <TouchableOpacity
+                    style={styles.totpPreviewBtn}
+                    onPress={() => handleTotpPreview(item)}
+                  >
+                    <ShieldCheck size={14} color="#10b981" />
+                    <Text style={styles.totpPreviewText}>Code</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity style={styles.editBtn} onPress={() => handleOpenEdit(item)}>
                   <Edit2 size={14} color="#94a3b8" />
                 </TouchableOpacity>
@@ -280,6 +333,54 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     fontWeight: "600",
     marginTop: 2,
+  },
+  marginsCard: {
+    flexDirection: "row",
+    backgroundColor: "#0f172a",
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#1e293b",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  marginCol: {
+    alignItems: "center",
+    flex: 1,
+  },
+  marginSubLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#94a3b8",
+  },
+  marginVal: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#f8fafc",
+    marginTop: 2,
+  },
+  marginDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: "#1e293b",
+  },
+  totpPreviewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  totpPreviewText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#10b981",
   },
   upstoxCard: {
     backgroundColor: "#0f172a",
