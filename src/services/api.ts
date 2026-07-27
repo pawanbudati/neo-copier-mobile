@@ -18,7 +18,7 @@ export const STORAGE_KEYS = {
   WATCHLIST: "@neo_copier_watchlist",
 };
 
-export const DEFAULT_SERVER_URL = "http://192.168.0.195:3000";
+export const DEFAULT_SERVER_URL = "https://neo-copier.duckdns.org";
 
 let currentServerUrl = DEFAULT_SERVER_URL;
 

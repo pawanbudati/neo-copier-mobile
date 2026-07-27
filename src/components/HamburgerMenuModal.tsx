@@ -156,7 +156,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                         </Text>
                       </View>
                       <Text style={styles.cardSub} numberOfLines={1}>
-                        {serverUrl || "http://192.168.0.195:3000"} • {isConnected ? "Online" : "Offline"}
+                        {serverUrl || "https://neo-copier.duckdns.org"} • {isConnected ? "Online" : "Offline"}
                       </Text>
                     </View>
                     <View style={styles.actionArrow}>

@@ -62,7 +62,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
             <Cloud size={14} color="#38bdf8" />
             <Text style={styles.activeUrlLabel}>Active Backend URL:</Text>
             <Text style={styles.activeUrlValue} numberOfLines={1}>
-              {serverUrl || "http://192.168.0.195:3000"}
+              {serverUrl || "https://neo-copier.duckdns.org"}
             </Text>
           </View>
 
@@ -72,7 +72,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
               style={styles.input}
               value={inputUrl}
               onChangeText={setInputUrl}
-              placeholder="e.g. http://34.123.45.67:3000 or http://192.168.0.195:3000"
+              placeholder="e.g. https://neo-copier.duckdns.org"
               placeholderTextColor="#64748b"
               autoCapitalize="none"
               autoCorrect={false}
@@ -81,17 +81,14 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
 
           <Text style={styles.presetLabel}>Quick Presets:</Text>
           <View style={styles.presetRow}>
-            <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://YOUR_VM_IP:3000")}>
-              <Text style={styles.presetText}>Cloud VM Instance (YOUR_VM_IP:3000)</Text>
+            <TouchableOpacity style={[styles.presetChip, { borderColor: "#06b6d4", backgroundColor: "rgba(6, 182, 212, 0.15)" }]} onPress={() => handlePreset("https://neo-copier.duckdns.org")}>
+              <Text style={[styles.presetText, { color: "#06b6d4", fontWeight: "700" }]}>GCP Cloud Instance (duckdns.org)</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://192.168.0.195:3000")}>
               <Text style={styles.presetText}>LAN Wi-Fi (192.168.0.195:3000)</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://10.0.2.2:3000")}>
               <Text style={styles.presetText}>Android Emulator (10.0.2.2:3000)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://localhost:3000")}>
-              <Text style={styles.presetText}>Localhost (3000)</Text>
             </TouchableOpacity>
           </View>
 
