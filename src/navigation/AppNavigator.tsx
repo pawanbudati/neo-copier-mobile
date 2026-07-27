@@ -11,6 +11,7 @@ import { LogsScreen } from "../screens/LogsScreen";
 import { LiveChartScreen } from "../screens/LiveChartScreen";
 import { AppHeader } from "../components/AppHeader";
 import { ServerConfigModal } from "../components/ServerConfigModal";
+import { UpstoxModal } from "../components/UpstoxModal";
 import { TrendingUp, Users, ShoppingBag, Terminal } from "lucide-react-native";
 
 const Tab = createBottomTabNavigator();
@@ -18,10 +19,12 @@ const Stack = createNativeStackNavigator();
 
 function MainTabNavigator({
   onOpenServerConfig,
+  onOpenUpstoxConfig,
   isLightTheme,
   onToggleTheme,
 }: {
   onOpenServerConfig: () => void;
+  onOpenUpstoxConfig: () => void;
   isLightTheme: boolean;
   onToggleTheme: () => void;
 }) {
@@ -37,6 +40,7 @@ function MainTabNavigator({
       />
       <AppHeader
         onOpenServerConfig={onOpenServerConfig}
+        onOpenUpstoxConfig={onOpenUpstoxConfig}
         isLightTheme={isLightTheme}
         onToggleTheme={onToggleTheme}
       />
@@ -97,6 +101,7 @@ function MainTabNavigator({
 
 export function AppNavigator() {
   const [serverModalVisible, setServerModalVisible] = useState(false);
+  const [upstoxModalVisible, setUpstoxModalVisible] = useState(false);
   const [isLightTheme, setIsLightTheme] = useState(false);
 
   return (
@@ -107,6 +112,7 @@ export function AppNavigator() {
             <MainTabNavigator
               {...props}
               onOpenServerConfig={() => setServerModalVisible(true)}
+              onOpenUpstoxConfig={() => setUpstoxModalVisible(true)}
               isLightTheme={isLightTheme}
               onToggleTheme={() => setIsLightTheme((prev) => !prev)}
             />
@@ -118,6 +124,11 @@ export function AppNavigator() {
       <ServerConfigModal
         visible={serverModalVisible}
         onClose={() => setServerModalVisible(false)}
+      />
+
+      <UpstoxModal
+        visible={upstoxModalVisible}
+        onClose={() => setUpstoxModalVisible(false)}
       />
     </NavigationContainer>
   );

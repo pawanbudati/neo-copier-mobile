@@ -161,48 +161,6 @@ export const AccountsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Ultra-Compact System Control Bar */}
-      <View style={styles.compactControlBar}>
-        <View style={styles.compactToggleItem}>
-          <Text style={styles.compactToggleLabel}>Auto Replicate</Text>
-          <Switch
-            value={settings.autoReplicate}
-            onValueChange={(val) => updateSettings({ autoReplicate: val })}
-            trackColor={{ false: "#334155", true: "#0284c7" }}
-            thumbColor={settings.autoReplicate ? "#38bdf8" : "#94a3b8"}
-            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
-          />
-        </View>
-
-        <View style={styles.compactDivider} />
-
-        <View style={styles.compactToggleItem}>
-          <Text style={styles.compactToggleLabel}>Auto TOTP</Text>
-          <Switch
-            value={settings.autoRenewSessions}
-            onValueChange={(val) => updateSettings({ autoRenewSessions: val })}
-            trackColor={{ false: "#334155", true: "#0284c7" }}
-            thumbColor={settings.autoRenewSessions ? "#38bdf8" : "#94a3b8"}
-            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
-          />
-        </View>
-
-        <View style={styles.compactDivider} />
-
-        <TouchableOpacity
-          style={[
-            styles.compactUpstoxBtn,
-            { backgroundColor: upstoxConnected ? "rgba(16, 185, 129, 0.15)" : "rgba(56, 189, 248, 0.15)" },
-          ]}
-          onPress={() => setUpstoxModalVisible(true)}
-        >
-          <Key size={12} color={upstoxConnected ? "#10b981" : "#38bdf8"} />
-          <Text style={[styles.compactUpstoxText, { color: upstoxConnected ? "#10b981" : "#38bdf8" }]}>
-            {upstoxConnected ? "Upstox Keys" : "Upstox Keys"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Account Header & Action */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Kotak Accounts</Text>

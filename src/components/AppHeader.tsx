@@ -1,16 +1,19 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useApp } from "../context/AppContext";
-import { Server, Zap, Sun, Moon, Power } from "lucide-react-native";
+import { Zap, Menu } from "lucide-react-native";
+import { HamburgerMenuModal } from "./HamburgerMenuModal";
 
 interface AppHeaderProps {
   onOpenServerConfig: () => void;
+  onOpenUpstoxConfig?: () => void;
   isLightTheme?: boolean;
   onToggleTheme?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenServerConfig,
+  onOpenUpstoxConfig = () => {},
   isLightTheme = false,
   onToggleTheme,
 }) => {
@@ -18,12 +21,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     isConnected,
     isConnecting,
     totalPnl,
-    settings,
-    updateSettings,
     quotes,
-    masterPowerActive,
-    toggleMasterPower,
   } = useApp();
+
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const safePnl = typeof totalPnl === "number" && !isNaN(totalPnl) ? totalPnl : 0;
   const isPositive = safePnl >= 0;
@@ -82,19 +83,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </View>
 
         <View style={styles.rightActions}>
-          <TouchableOpacity
-            style={[
-              styles.powerButton,
-              masterPowerActive ? styles.powerButtonActive : styles.powerButtonInactive,
-            ]}
-            onPress={() => toggleMasterPower(!masterPowerActive)}
-          >
-            <Power size={16} color={masterPowerActive ? "#10b981" : "#f43f5e"} />
-            <Text style={[styles.powerText, { color: masterPowerActive ? "#10b981" : "#f43f5e" }]}>
-              {masterPowerActive ? "ACTIVE" : "PAUSED"}
-            </Text>
-          </TouchableOpacity>
-
           <View
             style={[
               styles.pnlBadge,
@@ -107,14 +95,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </Text>
           </View>
 
-          {onToggleTheme && (
-            <TouchableOpacity style={styles.iconButton} onPress={onToggleTheme}>
-              {isLightTheme ? <Moon size={18} color="#0284c7" /> : <Sun size={18} color="#f59e0b" />}
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={styles.iconButton} onPress={onOpenServerConfig}>
-            <Server size={18} color="#94a3b8" />
+          <TouchableOpacity style={styles.menuButton} onPress={() => setMenuVisible(true)}>
+            <Menu size={22} color={isLightTheme ? "#0f172a" : "#f8fafc"} />
           </TouchableOpacity>
         </View>
       </View>
@@ -125,6 +107,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <View style={styles.indexDivider} />
         {renderIndexChip("SENSEX", ["SENSEX", "Sensex", "1"])}
       </View>
+
+      {/* Hamburger Menu Drawer Modal */}
+      <HamburgerMenuModal
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        onOpenServerConfig={onOpenServerConfig}
+        onOpenUpstoxConfig={onOpenUpstoxConfig}
+        isLightTheme={isLightTheme}
+        onToggleTheme={onToggleTheme}
+      />
     </View>
   );
 };
@@ -236,6 +228,13 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: "#1e293b",
+  },
+  menuButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#1e293b",
+    alignItems: "center",
+    justifyContent: "center",
   },
   indicesBarContainer: {
     flexDirection: "row",
