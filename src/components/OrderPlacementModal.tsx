@@ -129,10 +129,11 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
       };
 
       await ApiService.placeOrder(payload);
-      await Promise.all([refreshOrders(), refreshPositions()]);
       setSubmitting(false);
       Alert.alert("Order Placed", `${transactionType} ${productType} order for ${symbol} placed successfully!`);
       onClose();
+      // Refresh in background — don't block the UI
+      Promise.all([refreshOrders(), refreshPositions()]).catch(() => {});
     } catch (e: any) {
       setSubmitting(false);
       Alert.alert("Order Failed", e?.message || "Could not place order.");

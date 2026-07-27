@@ -48,27 +48,40 @@ export async function setServerUrl(url: string): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.SERVER_URL, cleanUrl);
 }
 
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function request<T>(endpoint: string, options?: RequestInit, timeoutMs = 15000): Promise<T> {
   const url = `${currentServerUrl}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(options?.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`API Error [${response.status}]: ${errorText || response.statusText}`);
-  }
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(options?.headers || {}),
+      },
+    });
 
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    return response.json();
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(`API Error [${response.status}]: ${errorText || response.statusText}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return response.json();
+    }
+    return response.text() as unknown as T;
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new Error("Request timed out. Backend may be slow or unreachable.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return response.text() as unknown as T;
 }
 
 export const ApiService = {
