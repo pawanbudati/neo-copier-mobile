@@ -11,7 +11,8 @@ import {
   AccountMargin,
 } from "../types";
 import { ApiService, initServerUrl, getServerUrl, setServerUrl as saveServerUrl } from "../services/api";
-import { kotakFeed } from "../services/kotakWebSocket";
+import { quoteStream } from "../services/quoteStream";
+import { KotakLiveFeed } from "../services/kotakWebSocket";
 
 interface AppContextType {
   serverUrl: string;
@@ -238,12 +239,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshFeedCredentials = useCallback(async () => {
     try {
-      const creds = await ApiService.getFeedCredentials();
-      if (creds && creds.accessToken && creds.sid) {
-        kotakFeed.connect(creds.accessToken, creds.sid, creds.serverId || "");
-      }
+      await ApiService.getFeedCredentials();
     } catch (e) {
-      console.warn("Failed to connect live feed", e);
+      console.warn("Failed to fetch feed credentials", e);
     }
   }, []);
 
@@ -292,25 +290,138 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [refreshAllData]);
 
-  // Auto-subscribe to scrips in Watchlist, Positions, NIFTY 50, and SENSEX
+  const feedRef = React.useRef<KotakLiveFeed | null>(null);
+
+  const mapToNeoExchange = (exch?: string): string => {
+    if (!exch) return "nse_cm";
+    const e = exch.toLowerCase();
+    if (e.includes("nse_fo") || e.includes("nse_df") || e.includes("fo")) return "nse_fo";
+    if (e.includes("bse_fo")) return "bse_fo";
+    if (e.includes("bse")) return "bse_cm";
+    return "nse_cm";
+  };
+
+  const lookupInstrument = useCallback((token: string) => {
+    if (token === "Nifty 50" || token === "NIFTY" || token === "26000") {
+      return { exchange_segment: "nse_cm", instrument_token: "26000", isIndex: true };
+    }
+    if (token === "SENSEX" || token === "Sensex" || token === "1") {
+      return { exchange_segment: "bse_cm", instrument_token: "1", isIndex: true };
+    }
+
+    const watchItem = watchlist.find((w) => w.scriptToken === token);
+    if (watchItem) {
+      return {
+        exchange_segment: mapToNeoExchange(watchItem.exchange),
+        instrument_token: token,
+        isIndex: false,
+      };
+    }
+
+    for (const acc of positions) {
+      const posItem = (acc as any).scriptToken === token || (acc as any).symbol === token ? acc : null;
+      if (posItem) {
+        return {
+          exchange_segment: mapToNeoExchange((posItem as any).exchange),
+          instrument_token: token,
+          isIndex: false,
+        };
+      }
+    }
+
+    return { exchange_segment: "nse_cm", instrument_token: token, isIndex: false };
+  }, [watchlist, positions]);
+
+  const subscribeToTokens = useCallback(async (tokens: string[]) => {
+    const uniqueTokens = [...new Set(tokens.filter(Boolean))];
+    if (!uniqueTokens.length) return;
+
+    try {
+      let feed = feedRef.current;
+      if (!feed) {
+        const creds = await ApiService.getFeedCredentials();
+        if (creds && creds.accessToken && creds.sid) {
+          feed = new KotakLiveFeed({
+            accessToken: creds.accessToken,
+            sid: creds.sid,
+            serverId: creds.serverId,
+            dataCenter: creds.dataCenter,
+          });
+
+          feed.onTick((tick) => {
+            setQuotes((prev) => {
+              const next = { ...prev };
+              const qData: QuoteData = {
+                ltp: tick.ltp,
+                change: tick.change,
+                changePct: tick.changePct,
+                prevLtp: prev[tick.token]?.ltp,
+              };
+              next[tick.token] = qData;
+
+              // Index alias mapping
+              if (tick.token === "26000") {
+                next["Nifty 50"] = qData;
+                next["NIFTY"] = qData;
+                next["NIFTY50"] = qData;
+              } else if (tick.token === "1") {
+                next["SENSEX"] = qData;
+                next["Sensex"] = qData;
+              }
+              return next;
+            });
+          });
+
+          feed.connect();
+          feedRef.current = feed;
+        }
+      }
+
+      if (feed) {
+        const insts: any[] = [];
+        const idxs: any[] = [];
+        for (const t of uniqueTokens) {
+          const inst = lookupInstrument(t);
+          if (inst.isIndex) {
+            idxs.push({ exchange_segment: inst.exchange_segment, instrument_token: inst.instrument_token });
+          } else {
+            insts.push({ exchange_segment: inst.exchange_segment, instrument_token: inst.instrument_token });
+          }
+        }
+        if (idxs.length) feed.subscribe(idxs, true);
+        if (insts.length) feed.subscribe(insts, false);
+      }
+    } catch (e) {
+      console.warn("Direct KotakLiveFeed subscription error:", e);
+    }
+
+    if (serverUrl) {
+      quoteStream.subscribe(serverUrl, uniqueTokens);
+    }
+  }, [lookupInstrument, serverUrl]);
+
+  // Auto-subscribe to scrips in Watchlist, Positions, NIFTY 50, and SENSEX via direct WebSocket & quoteStream
   useEffect(() => {
+    if (!isConnected) return;
+
     const tokens = new Set<string>();
     tokens.add("Nifty 50");
     tokens.add("SENSEX");
+    tokens.add("26000");
+    tokens.add("1");
 
     watchlist.forEach((w) => {
       if (w.scriptToken) tokens.add(w.scriptToken);
+      if (w.tradingSymbol) tokens.add(w.tradingSymbol);
     });
 
     positions.forEach((p: any) => {
       if (p.scriptToken) tokens.add(p.scriptToken);
-      else if (p.symbol) tokens.add(p.symbol);
+      if (p.symbol) tokens.add(p.symbol);
     });
 
-    tokens.forEach((token) => {
-      kotakFeed.subscribe(token);
-    });
-  }, [watchlist, positions]);
+    subscribeToTokens(Array.from(tokens));
+  }, [isConnected, watchlist, positions, subscribeToTokens]);
 
   // Periodic polling for fast updates (orders, positions, logs, margins, power)
   useEffect(() => {
@@ -326,31 +437,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearInterval(interval);
   }, [isConnected, refreshOrders, refreshPositions, refreshMargins, refreshOcoRules, refreshLogs]);
 
-  // Kotak WebSocket tick listener
+  // Live QuoteStream tick listener
   useEffect(() => {
-    const unsub = kotakFeed.onTick((tick) => {
-      if (!tick.tk || typeof tick.ltp !== "number") return;
+    const unsub = quoteStream.onQuotes((incomingQuotes) => {
       setQuotes((prev) => {
-        const existing = prev[tick.tk] || { ltp: tick.ltp!, change: 0, changePct: 0 };
-        const change = tick.cng ?? (existing.prevLtp ? tick.ltp! - existing.prevLtp : existing.change);
-        const changePct = tick.nc ?? (existing.prevLtp ? (change / existing.prevLtp) * 100 : existing.changePct);
-        return {
-          ...prev,
-          [tick.tk]: {
-            ltp: tick.ltp!,
+        const next = { ...prev };
+        for (const [key, q] of Object.entries(incomingQuotes)) {
+          if (!q || typeof q.ltp !== "number") continue;
+          const ltpVal = Number(q.ltp);
+          if (isNaN(ltpVal) || ltpVal <= 0) continue;
+
+          const existing = next[key] || prev[key] || { ltp: ltpVal, change: 0, changePct: 0 };
+          const change = typeof q.change === "number" ? q.change : (existing.prevLtp ? ltpVal - existing.prevLtp : existing.change);
+          const changePct = typeof q.changePct === "number" ? q.changePct : (existing.prevLtp && existing.prevLtp !== 0 ? (change / existing.prevLtp) * 100 : existing.changePct);
+
+          const updatedQuote: QuoteData = {
+            ltp: ltpVal,
             change,
             changePct,
             prevLtp: existing.ltp,
-            high: tick.h ?? existing.high,
-            low: tick.lo ?? existing.low,
-            open: tick.op ?? existing.open,
-            close: tick.c ?? existing.close,
-            volume: tick.v ?? existing.volume,
-          },
-        };
+            high: q.high ?? existing.high,
+            low: q.low ?? existing.low,
+            open: q.open ?? existing.open,
+            close: q.close ?? existing.close,
+            volume: q.volume ?? existing.volume,
+          };
+
+          next[key] = updatedQuote;
+
+          // Register quote under all alias keys (token, symbol, trading_symbol)
+          if (q.token && q.token !== key) next[q.token] = updatedQuote;
+          if (q.symbol && q.symbol !== key) next[q.symbol] = updatedQuote;
+          if (q.trading_symbol && q.trading_symbol !== key) next[q.trading_symbol] = updatedQuote;
+
+          // Index alias mapping
+          if (key === "26000" || q.token === "26000" || q.symbol === "Nifty 50") {
+            next["26000"] = updatedQuote;
+            next["Nifty 50"] = updatedQuote;
+            next["NIFTY"] = updatedQuote;
+            next["NIFTY50"] = updatedQuote;
+          } else if (key === "1" || q.token === "1" || q.symbol === "SENSEX") {
+            next["1"] = updatedQuote;
+            next["SENSEX"] = updatedQuote;
+            next["Sensex"] = updatedQuote;
+          }
+        }
+        return next;
       });
     });
-    return () => unsub();
+
+    return () => {
+      unsub();
+    };
   }, []);
 
   return (

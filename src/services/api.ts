@@ -5,6 +5,7 @@ import {
   TradeOrder,
   WatchlistItem,
   Position,
+  QuoteData,
   SystemLog,
   OcoRule,
   AccountMargin,
@@ -239,7 +240,6 @@ export const ApiService = {
     });
   },
 
-  // ─── Scrips & Search ────────────────────────────────────────────────────────
   async searchScrips(query: string): Promise<any[]> {
     const data = await request<any>(`/api/search?q=${encodeURIComponent(query)}`);
     if (Array.isArray(data)) return data;

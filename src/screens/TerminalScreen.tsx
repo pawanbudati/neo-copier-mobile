@@ -221,7 +221,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
           keyExtractor={(item, idx) => String(item.scriptToken || item.tradingSymbol || idx)}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => {
-            const quote = quotes[item.scriptToken];
+            const quote = quotes[item.scriptToken] || quotes[item.tradingSymbol] || quotes[item.scripRefKey];
             const ltp = quote?.ltp ?? 0;
             const change = quote?.change ?? 0;
             const changePct = quote?.changePct ?? 0;
