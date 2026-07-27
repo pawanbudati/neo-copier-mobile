@@ -46,6 +46,7 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
     updateSettings,
     upstoxConnected,
     isConnected,
+    serverUrl,
   } = useApp();
 
   if (!visible) return null;
@@ -154,8 +155,8 @@ export const HamburgerMenuModal: React.FC<HamburgerMenuModalProps> = ({
                           Backend Server Settings
                         </Text>
                       </View>
-                      <Text style={styles.cardSub}>
-                        {isConnected ? "Server Online • Port 3000" : "Server Disconnected"}
+                      <Text style={styles.cardSub} numberOfLines={1}>
+                        {serverUrl || "http://192.168.0.195:3000"} • {isConnected ? "Online" : "Offline"}
                       </Text>
                     </View>
                     <View style={styles.actionArrow}>

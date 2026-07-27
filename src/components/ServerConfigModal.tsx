@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert } from "react-native";
 import { useApp } from "../context/AppContext";
-import { Server, X, Check, Globe } from "lucide-react-native";
+import { Server, X, Check, Globe, Cloud } from "lucide-react-native";
 
 interface ServerConfigModalProps {
   visible: boolean;
@@ -12,6 +12,12 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
   const { serverUrl, updateServerUrl, isConnected } = useApp();
   const [inputUrl, setInputUrl] = useState(serverUrl);
   const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setInputUrl(serverUrl);
+    }
+  }, [visible, serverUrl]);
 
   const handleSave = async () => {
     if (!inputUrl.trim()) {
@@ -48,8 +54,17 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
           </View>
 
           <Text style={styles.description}>
-            Enter the host IP or domain where your Neo-Copier Java Backend service is running.
+            Enter the Cloud VM Instance IP or local host URL where your Neo-Copier Java Backend is running.
           </Text>
+
+          {/* Active URL Badge */}
+          <View style={styles.activeUrlBox}>
+            <Cloud size={14} color="#38bdf8" />
+            <Text style={styles.activeUrlLabel}>Active Backend URL:</Text>
+            <Text style={styles.activeUrlValue} numberOfLines={1}>
+              {serverUrl || "http://192.168.0.195:3000"}
+            </Text>
+          </View>
 
           <View style={styles.inputContainer}>
             <Globe size={18} color="#64748b" style={styles.inputIcon} />
@@ -57,7 +72,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
               style={styles.input}
               value={inputUrl}
               onChangeText={setInputUrl}
-              placeholder="e.g. http://192.168.0.195:3000"
+              placeholder="e.g. http://34.123.45.67:3000 or http://192.168.0.195:3000"
               placeholderTextColor="#64748b"
               autoCapitalize="none"
               autoCorrect={false}
@@ -66,6 +81,9 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
 
           <Text style={styles.presetLabel}>Quick Presets:</Text>
           <View style={styles.presetRow}>
+            <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://YOUR_VM_IP:3000")}>
+              <Text style={styles.presetText}>Cloud VM Instance (YOUR_VM_IP:3000)</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.presetChip} onPress={() => handlePreset("http://192.168.0.195:3000")}>
               <Text style={styles.presetText}>LAN Wi-Fi (192.168.0.195:3000)</Text>
             </TouchableOpacity>
@@ -78,9 +96,9 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Current Status:</Text>
+            <Text style={styles.statusLabel}>Connection Status:</Text>
             <Text style={[styles.statusVal, { color: isConnected ? "#10b981" : "#ef4444" }]}>
-              {isConnected ? "Connected" : "Disconnected"}
+              {isConnected ? "Connected • Online" : "Disconnected • Offline"}
             </Text>
           </View>
 
@@ -136,8 +154,31 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 13,
     color: "#94a3b8",
-    marginBottom: 16,
+    marginBottom: 12,
     lineHeight: 18,
+  },
+  activeUrlBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(56, 189, 248, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.25)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  activeUrlLabel: {
+    fontSize: 11,
+    color: "#94a3b8",
+    fontWeight: "600",
+  },
+  activeUrlValue: {
+    fontSize: 12,
+    color: "#38bdf8",
+    fontWeight: "800",
+    flex: 1,
   },
   inputContainer: {
     flexDirection: "row",
