@@ -16,26 +16,42 @@ import { TrendingUp, Users, ShoppingBag, Terminal } from "lucide-react-native";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function MainTabNavigator({ onOpenServerConfig }: { onOpenServerConfig: () => void }) {
+function MainTabNavigator({
+  onOpenServerConfig,
+  isLightTheme,
+  onToggleTheme,
+}: {
+  onOpenServerConfig: () => void;
+  isLightTheme: boolean;
+  onToggleTheme: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 12);
 
   return (
-    <SafeAreaView style={styles.safeContainer} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" translucent={false} />
-      <AppHeader onOpenServerConfig={onOpenServerConfig} />
+    <SafeAreaView style={[styles.safeContainer, isLightTheme && styles.safeContainerLight]} edges={["top"]}>
+      <StatusBar
+        barStyle={isLightTheme ? "dark-content" : "light-content"}
+        backgroundColor={isLightTheme ? "#ffffff" : "#0f172a"}
+        translucent={false}
+      />
+      <AppHeader
+        onOpenServerConfig={onOpenServerConfig}
+        isLightTheme={isLightTheme}
+        onToggleTheme={onToggleTheme}
+      />
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: "#0f172a",
-            borderTopColor: "#1e293b",
+            backgroundColor: isLightTheme ? "#ffffff" : "#0f172a",
+            borderTopColor: isLightTheme ? "#e2e8f0" : "#1e293b",
             height: 56 + bottomInset,
             paddingBottom: bottomInset,
             paddingTop: 6,
           },
           tabBarActiveTintColor: "#06b6d4",
-          tabBarInactiveTintColor: "#64748b",
+          tabBarInactiveTintColor: isLightTheme ? "#94a3b8" : "#64748b",
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: "700",
@@ -81,6 +97,7 @@ function MainTabNavigator({ onOpenServerConfig }: { onOpenServerConfig: () => vo
 
 export function AppNavigator() {
   const [serverModalVisible, setServerModalVisible] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(false);
 
   return (
     <NavigationContainer>
@@ -90,6 +107,8 @@ export function AppNavigator() {
             <MainTabNavigator
               {...props}
               onOpenServerConfig={() => setServerModalVisible(true)}
+              isLightTheme={isLightTheme}
+              onToggleTheme={() => setIsLightTheme((prev) => !prev)}
             />
           )}
         </Stack.Screen>
@@ -108,5 +127,8 @@ const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: "#0f172a",
+  },
+  safeContainerLight: {
+    backgroundColor: "#ffffff",
   },
 });

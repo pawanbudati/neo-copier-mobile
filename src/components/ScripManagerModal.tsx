@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,11 +19,32 @@ interface ScripManagerModalProps {
 
 export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, onClose }) => {
   const [loadingCategory, setLoadingCategory] = useState<string | null>(null);
+  const [scripStatus, setScripStatus] = useState<any>(null);
+  const [fetchingStatus, setFetchingStatus] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    setFetchingStatus(true);
+    try {
+      const data = await ApiService.getScripStatus();
+      setScripStatus(data);
+    } catch (e) {
+      console.warn("Failed to fetch scrip status", e);
+    } finally {
+      setFetchingStatus(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      fetchStatus();
+    }
+  }, [visible, fetchStatus]);
 
   const handleSyncDailyOptions = async () => {
     setLoadingCategory("daily");
     try {
       const res = await ApiService.loadDailyOptions();
+      await fetchStatus();
       setLoadingCategory(null);
       Alert.alert(
         "Sync Complete",
@@ -39,11 +60,25 @@ export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, o
     setLoadingCategory(categoryKey);
     try {
       const res = await ApiService.loadScripCategory(categoryKey);
+      await fetchStatus();
       setLoadingCategory(null);
       Alert.alert("Loaded", `Loaded ${res.count || 0} scrips for ${categoryLabel}.`);
     } catch (e: any) {
       setLoadingCategory(null);
       Alert.alert("Load Failed", e?.message || `Could not load ${categoryLabel}.`);
+    }
+  };
+
+  const handleWarmCache = async () => {
+    setLoadingCategory("cache");
+    try {
+      const res = await ApiService.populateCache();
+      await fetchStatus();
+      setLoadingCategory(null);
+      Alert.alert("Cache Warmed", `Loaded ${res.count || 0} scrips into memory.`);
+    } catch (e: any) {
+      setLoadingCategory(null);
+      Alert.alert("Cache Failed", e?.message || "Failed to warm cache.");
     }
   };
 
@@ -57,6 +92,7 @@ export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, o
           setLoadingCategory("clear");
           try {
             await ApiService.clearScrips();
+            await fetchStatus();
             setLoadingCategory(null);
             Alert.alert("Cleared", "All scrips removed from database.");
           } catch (e: any) {
@@ -68,6 +104,13 @@ export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, o
     ]);
   };
 
+  const categoryMap: Record<string, any> = {};
+  if (scripStatus && Array.isArray(scripStatus.categories)) {
+    scripStatus.categories.forEach((cat: any) => {
+      categoryMap[cat.key] = cat;
+    });
+  }
+
   const categories = [
     { key: "nse_fo", label: "NSE Futures & Options" },
     { key: "bse_fo", label: "BSE Futures & Options" },
@@ -76,6 +119,8 @@ export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, o
     { key: "mcx_fo", label: "MCX Commodities" },
     { key: "cde_fo", label: "CDS Currency Derivatives" },
   ];
+
+  const totalCount = scripStatus?.totalCount ?? 0;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -92,6 +137,34 @@ export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, o
           </View>
 
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Live Cache Status Card */}
+            <View style={styles.statusCard}>
+              <View style={styles.statusCardHeader}>
+                <View>
+                  <Text style={styles.statusLabel}>Active Memory Cache Status</Text>
+                  <Text style={styles.statusVal}>{totalCount.toLocaleString()} Scrips Loaded</Text>
+                </View>
+                <TouchableOpacity style={styles.refreshIconBtn} onPress={fetchStatus} disabled={fetchingStatus}>
+                  <RefreshCw size={14} color="#06b6d4" />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.warmCacheBtn}
+                onPress={handleWarmCache}
+                disabled={loadingCategory !== null}
+              >
+                {loadingCategory === "cache" ? (
+                  <ActivityIndicator size="small" color="#38bdf8" />
+                ) : (
+                  <>
+                    <RefreshCw size={12} color="#38bdf8" />
+                    <Text style={styles.warmCacheText}>Re-index / Warm Memory Cache</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
             {/* Sync Daily Options */}
             <TouchableOpacity
               style={styles.syncBtn}
@@ -113,24 +186,40 @@ export const ScripManagerModal: React.FC<ScripManagerModalProps> = ({ visible, o
 
             <Text style={styles.sectionHeader}>Full Category Load</Text>
 
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat.key}
-                style={styles.categoryRow}
-                onPress={() => handleLoadCategory(cat.key, cat.label)}
-                disabled={loadingCategory !== null}
-              >
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
-                {loadingCategory === cat.key ? (
-                  <ActivityIndicator size="small" color="#06b6d4" />
-                ) : (
-                  <View style={styles.loadBadge}>
-                    <RefreshCw size={12} color="#06b6d4" />
-                    <Text style={styles.loadBadgeText}>Load</Text>
+            {categories.map((cat) => {
+              const info = categoryMap[cat.key];
+              const count = info?.count ?? 0;
+              const isLoaded = info?.isLoaded ?? count > 0;
+
+              return (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={styles.categoryRow}
+                  onPress={() => handleLoadCategory(cat.key, cat.label)}
+                  disabled={loadingCategory !== null}
+                >
+                  <View style={styles.catLeft}>
+                    <Text style={styles.categoryLabel}>{cat.label}</Text>
+                    {isLoaded ? (
+                      <Text style={styles.catLoadedText}>✓ Loaded ({count.toLocaleString()} scrips)</Text>
+                    ) : (
+                      <Text style={styles.catNotLoadedText}>Not Loaded</Text>
+                    )}
                   </View>
-                )}
-              </TouchableOpacity>
-            ))}
+
+                  {loadingCategory === cat.key ? (
+                    <ActivityIndicator size="small" color="#06b6d4" />
+                  ) : (
+                    <View style={[styles.loadBadge, isLoaded && styles.loadBadgeActive]}>
+                      <RefreshCw size={12} color={isLoaded ? "#10b981" : "#06b6d4"} />
+                      <Text style={[styles.loadBadgeText, isLoaded && styles.loadBadgeTextActive]}>
+                        {isLoaded ? "Reload" : "Load"}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
 
             <TouchableOpacity
               style={styles.clearBtn}
@@ -160,7 +249,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1e293b",
     padding: 20,
-    maxHeight: "80%",
+    maxHeight: "85%",
   },
   header: {
     flexDirection: "row",
@@ -184,6 +273,51 @@ const styles = StyleSheet.create({
   scrollContent: {
     marginBottom: 4,
   },
+  statusCard: {
+    backgroundColor: "#1e293b",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  statusCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  statusLabel: {
+    fontSize: 11,
+    color: "#94a3b8",
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  statusVal: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#10b981",
+    marginTop: 2,
+  },
+  refreshIconBtn: {
+    padding: 6,
+    backgroundColor: "rgba(6, 182, 212, 0.15)",
+    borderRadius: 8,
+  },
+  warmCacheBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    borderRadius: 8,
+  },
+  warmCacheText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#38bdf8",
+  },
   syncBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -198,21 +332,19 @@ const styles = StyleSheet.create({
   },
   syncBtnText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "800",
     color: "#090d16",
   },
   syncSubText: {
     fontSize: 11,
-    color: "#0f172a",
-    fontWeight: "600",
-    marginTop: 2,
+    color: "rgba(9, 13, 22, 0.75)",
   },
   sectionHeader: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#94a3b8",
-    marginBottom: 8,
+    color: "#64748b",
     textTransform: "uppercase",
+    marginBottom: 10,
   },
   categoryRow: {
     flexDirection: "row",
@@ -223,40 +355,58 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 8,
   },
+  catLeft: {
+    flex: 1,
+  },
   categoryLabel: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#f8fafc",
+  },
+  catLoadedText: {
+    fontSize: 11,
+    color: "#10b981",
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  catNotLoadedText: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 2,
   },
   loadBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(6, 182, 212, 0.15)",
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 6,
+    backgroundColor: "rgba(6, 182, 212, 0.15)",
+  },
+  loadBadgeActive: {
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
   },
   loadBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: "#06b6d4",
+  },
+  loadBadgeTextActive: {
+    color: "#10b981",
   },
   clearBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "rgba(244, 63, 94, 0.15)",
-    borderWidth: 1,
-    borderColor: "#f43f5e",
-    paddingVertical: 12,
+    padding: 14,
     borderRadius: 10,
+    backgroundColor: "rgba(244, 63, 94, 0.15)",
     marginTop: 12,
   },
   clearBtnText: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#f43f5e",
   },
 });

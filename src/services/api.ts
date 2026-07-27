@@ -98,6 +98,10 @@ export const ApiService = {
     });
   },
 
+  async getFeedCredentials(): Promise<{ accessToken: string; sid: string; serverId?: string; dataCenter?: string }> {
+    return request<any>("/api/accounts/feed-credentials");
+  },
+
   // Upstox
   async getUpstoxStatus(): Promise<{ hasToken: boolean; authUrl?: string }> {
     return request<{ hasToken: boolean; authUrl?: string }>("/api/upstox/status");
@@ -173,6 +177,20 @@ export const ApiService = {
 
   async getScripCategories(): Promise<any[]> {
     return request<any[]>("/api/scrips/categories");
+  },
+
+  async getScripStatus(): Promise<any> {
+    return request<any>("/api/scrips/status");
+  },
+
+  async getCacheStatus(): Promise<any> {
+    return request<any>("/api/scrips/cache/status");
+  },
+
+  async populateCache(): Promise<any> {
+    return request<any>("/api/scrips/cache", {
+      method: "POST",
+    });
   },
 
   // Watchlist

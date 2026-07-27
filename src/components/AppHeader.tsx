@@ -1,14 +1,20 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Switch } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from "react-native";
 import { useApp } from "../context/AppContext";
-import { Server, Zap, RefreshCw } from "lucide-react-native";
+import { Server, Zap, Sun, Moon } from "lucide-react-native";
 
 interface AppHeaderProps {
   onOpenServerConfig: () => void;
+  isLightTheme?: boolean;
+  onToggleTheme?: () => void;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenServerConfig }) => {
-  const { isConnected, isConnecting, totalPnl, settings, updateSettings } = useApp();
+export const AppHeader: React.FC<AppHeaderProps> = ({
+  onOpenServerConfig,
+  isLightTheme = false,
+  onToggleTheme,
+}) => {
+  const { isConnected, isConnecting, totalPnl, settings, updateSettings, quotes } = useApp();
 
   const safePnl = typeof totalPnl === "number" && !isNaN(totalPnl) ? totalPnl : 0;
   const isPositive = safePnl >= 0;
@@ -17,15 +23,46 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenServerConfig }) => {
     maximumFractionDigits: 2,
   });
 
+  const renderIndexChip = (name: string, keys: string[]) => {
+    let q: any = null;
+    for (const k of keys) {
+      if (quotes[k]) {
+        q = quotes[k];
+        break;
+      }
+    }
+    const ltp = q?.ltp;
+    const change = q?.change ?? 0;
+    const changePct = q?.changePct ?? 0;
+    const isUp = change >= 0;
+
+    return (
+      <View style={styles.indexChip}>
+        <Text style={styles.indexName}>{name}</Text>
+        {ltp !== undefined && ltp > 0 ? (
+          <View style={styles.indexPriceRow}>
+            <Text style={styles.indexLtp}>₹{ltp.toFixed(2)}</Text>
+            <Text style={[styles.indexChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
+              {isUp ? `+${change.toFixed(2)}` : change.toFixed(2)} ({isUp ? `+${changePct.toFixed(2)}` : changePct.toFixed(2)}%)
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.indexLoading}>--.--</Text>
+        )}
+      </View>
+    );
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isLightTheme && styles.containerLight]}>
+      {/* Top Header Row */}
       <View style={styles.topRow}>
         <View style={styles.brandContainer}>
           <View style={styles.logoBadge}>
             <Zap size={18} color="#06b6d4" />
           </View>
           <View>
-            <Text style={styles.brandTitle}>NEO COPIER</Text>
+            <Text style={[styles.brandTitle, isLightTheme && styles.textLightPrimary]}>NEO COPIER</Text>
             <View style={styles.statusRow}>
               <View style={[styles.statusDot, { backgroundColor: isConnected ? "#10b981" : "#ef4444" }]} />
               <Text style={styles.statusText}>
@@ -48,15 +85,33 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenServerConfig }) => {
             </Text>
           </View>
 
+          {onToggleTheme && (
+            <TouchableOpacity style={styles.iconButton} onPress={onToggleTheme}>
+              {isLightTheme ? <Moon size={18} color="#0284c7" /> : <Sun size={18} color="#f59e0b" />}
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.iconButton} onPress={onOpenServerConfig}>
-            <Server size={20} color="#94a3b8" />
+            <Server size={18} color="#94a3b8" />
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Live Market Indices Ticker Bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.indicesBar}
+      >
+        {renderIndexChip("NIFTY 50", ["Nifty 50", "NIFTY", "NIFTY50", "26000"])}
+        <View style={styles.indexDivider} />
+        {renderIndexChip("SENSEX", ["SENSEX", "Sensex", "1"])}
+      </ScrollView>
+
+      {/* Control Switches Bar */}
       <View style={styles.controlBar}>
         <View style={styles.toggleItem}>
-          <Text style={styles.toggleLabel}>Auto Replicate</Text>
+          <Text style={[styles.toggleLabel, isLightTheme && styles.textLightSubtle]}>Auto Replicate</Text>
           <Switch
             value={settings.autoReplicate}
             onValueChange={(val) => updateSettings({ autoReplicate: val })}
@@ -68,7 +123,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenServerConfig }) => {
         <View style={styles.toggleDivider} />
 
         <View style={styles.toggleItem}>
-          <Text style={styles.toggleLabel}>Auto TOTP</Text>
+          <Text style={[styles.toggleLabel, isLightTheme && styles.textLightSubtle]}>Auto TOTP</Text>
           <Switch
             value={settings.autoRenewSessions}
             onValueChange={(val) => updateSettings({ autoRenewSessions: val })}
@@ -86,9 +141,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 10,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#1e293b",
+  },
+  containerLight: {
+    backgroundColor: "#ffffff",
+    borderBottomColor: "#e2e8f0",
   },
   topRow: {
     flexDirection: "row",
@@ -115,6 +174,12 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#f8fafc",
     letterSpacing: 0.8,
+  },
+  textLightPrimary: {
+    color: "#0f172a",
+  },
+  textLightSubtle: {
+    color: "#475569",
   },
   statusRow: {
     flexDirection: "row",
@@ -157,12 +222,57 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#1e293b",
   },
+  indicesBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    backgroundColor: "rgba(30, 41, 59, 0.4)",
+    borderRadius: 8,
+  },
+  indexChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 6,
+  },
+  indexName: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#94a3b8",
+    letterSpacing: 0.5,
+  },
+  indexPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  indexLtp: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#f8fafc",
+  },
+  indexChange: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  indexLoading: {
+    fontSize: 10,
+    color: "#64748b",
+  },
+  indexDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: "#334155",
+  },
   controlBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    marginTop: 10,
-    paddingTop: 8,
+    marginTop: 8,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.05)",
   },

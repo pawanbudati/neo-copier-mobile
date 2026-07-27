@@ -169,6 +169,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  const refreshFeedCredentials = useCallback(async () => {
+    try {
+      const creds = await ApiService.getFeedCredentials();
+      if (creds && creds.accessToken && creds.sid) {
+        kotakFeed.connect(creds.accessToken, creds.sid, creds.serverId || "");
+      }
+    } catch (e) {
+      console.warn("Failed to connect live feed", e);
+    }
+  }, []);
+
   const refreshAllData = useCallback(async () => {
     setIsConnecting(true);
     try {
@@ -182,6 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshSettings(),
         refreshLogs(),
         refreshUpstoxStatus(),
+        refreshFeedCredentials(),
       ]);
     } catch (e) {
       setIsConnected(false);
@@ -196,6 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshSettings,
     refreshLogs,
     refreshUpstoxStatus,
+    refreshFeedCredentials,
   ]);
 
   // Initial load
@@ -205,6 +218,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refreshAllData();
     });
   }, [refreshAllData]);
+
+  // Auto-subscribe to scrips in Watchlist, Positions, NIFTY 50, and SENSEX
+  useEffect(() => {
+    const tokens = new Set<string>();
+    tokens.add("Nifty 50");
+    tokens.add("SENSEX");
+
+    watchlist.forEach((w) => {
+      if (w.scriptToken) tokens.add(w.scriptToken);
+    });
+
+    positions.forEach((p: any) => {
+      if (p.scriptToken) tokens.add(p.scriptToken);
+      else if (p.symbol) tokens.add(p.symbol);
+    });
+
+    tokens.forEach((token) => {
+      kotakFeed.subscribe(token);
+    });
+  }, [watchlist, positions]);
 
   // Periodic polling for fast updates (orders, positions, logs)
   useEffect(() => {
