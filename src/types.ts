@@ -65,6 +65,7 @@ export interface QuoteData {
   ltp: number;
   change: number;
   changePct: number;
+  pChange?: number;
   prevLtp?: number;
   high?: number;
   low?: number;
@@ -103,6 +104,7 @@ export interface OcoRule {
 export interface AccountMargin {
   accountId?: string;
   accountName?: string;
+  role?: string;
   cash?: number;
   totalMargin?: number;
   availableMargin?: number;
