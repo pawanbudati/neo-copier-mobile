@@ -10,6 +10,7 @@ import {
   Modal,
 } from "react-native";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { ApiService } from "../services/api";
 import { TradeOrder } from "../types";
 import {
@@ -29,6 +30,7 @@ import {
 
 export const OrdersScreen: React.FC = () => {
   const { orders, refreshOrders } = useApp();
+  const { isLightTheme, colors } = useTheme();
 
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -176,28 +178,28 @@ export const OrdersScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Search & Filter Controls */}
       <View style={styles.headerControls}>
         <View style={styles.topControlRow}>
-          <View style={styles.searchBar}>
-            <Search size={16} color="#64748b" style={styles.searchIcon} />
+          <View style={[styles.searchBar, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+            <Search size={16} color={colors.textMuted} style={styles.searchIcon} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.textPrimary }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search orders..."
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
             />
           </View>
 
-          <TouchableOpacity style={styles.syncBtn} onPress={handleSyncOrders} disabled={syncing}>
-            <RefreshCw size={14} color="#06b6d4" />
-            <Text style={styles.syncBtnText}>{syncing ? "Syncing..." : "Sync"}</Text>
+          <TouchableOpacity style={[styles.syncBtn, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]} onPress={handleSyncOrders} disabled={syncing}>
+            <RefreshCw size={14} color={colors.primary} />
+            <Text style={[styles.syncBtnText, { color: colors.primary }]}>{syncing ? "Syncing..." : "Sync"}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.clearAllBtn} onPress={handleClearAllOrders}>
-            <Trash2 size={14} color="#f43f5e" />
+          <TouchableOpacity style={[styles.clearAllBtn, { backgroundColor: colors.dangerLight }]} onPress={handleClearAllOrders}>
+            <Trash2 size={14} color={colors.danger} />
           </TouchableOpacity>
         </View>
 
@@ -209,10 +211,14 @@ export const OrdersScreen: React.FC = () => {
           contentContainerStyle={styles.filterChipRow}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[styles.filterChip, filterStatus === item && styles.activeFilterChip]}
+              style={[
+                styles.filterChip,
+                { backgroundColor: colors.cardBg, borderColor: colors.cardBorder },
+                filterStatus === item && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+              ]}
               onPress={() => setFilterStatus(item)}
             >
-              <Text style={[styles.filterChipText, filterStatus === item && styles.activeFilterText]}>
+              <Text style={[styles.filterChipText, { color: colors.textSecondary }, filterStatus === item && { color: colors.primary, fontWeight: "800" }]}>
                 {item}
               </Text>
             </TouchableOpacity>
@@ -230,21 +236,21 @@ export const OrdersScreen: React.FC = () => {
           const priceNum = Number(item.price);
 
           return (
-            <View style={styles.orderCard}>
+            <View style={[styles.orderCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
               <View style={styles.cardHeader}>
                 <View style={styles.symbolCol}>
                   <View style={styles.symbolRow}>
                     <View
                       style={[
                         styles.sideTag,
-                        { backgroundColor: isBuy ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)" },
+                        { backgroundColor: isBuy ? colors.successLight : colors.dangerLight },
                       ]}
                     >
-                      <Text style={[styles.sideTagText, { color: isBuy ? "#10b981" : "#f43f5e" }]}>
+                      <Text style={[styles.sideTagText, { color: isBuy ? colors.success : colors.danger }]}>
                         {item.transactionType}
                       </Text>
                     </View>
-                    <Text style={styles.symbolText}>{item.symbol}</Text>
+                    <Text style={[styles.symbolText, { color: colors.textPrimary }]}>{item.symbol}</Text>
                     {item.productType && (
                       <View style={styles.prodTag}>
                         <Text style={styles.prodTagText}>{item.productType}</Text>

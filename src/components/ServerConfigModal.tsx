@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert } from "react-native";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { Server, X, Check, Globe, Cloud } from "lucide-react-native";
 
 interface ServerConfigModalProps {
@@ -10,6 +11,7 @@ interface ServerConfigModalProps {
 
 export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, onClose }) => {
   const { serverUrl, updateServerUrl, isConnected } = useApp();
+  const { isLightTheme, colors } = useTheme();
   const [inputUrl, setInputUrl] = useState(serverUrl);
   const [testing, setTesting] = useState(false);
 
@@ -42,38 +44,38 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
           <View style={styles.modalHeader}>
             <View style={styles.headerTitleRow}>
-              <Server size={20} color="#06b6d4" />
-              <Text style={styles.modalTitle}>Backend Server Configuration</Text>
+              <Server size={20} color={colors.primary} />
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Backend Server Configuration</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.cardBgSecondary }]}>
+              <X size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.description}>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>
             Enter the Cloud VM Instance IP or local host URL where your Neo-Copier Java Backend is running.
           </Text>
 
           {/* Active URL Badge */}
-          <View style={styles.activeUrlBox}>
-            <Cloud size={14} color="#38bdf8" />
-            <Text style={styles.activeUrlLabel}>Active Backend URL:</Text>
-            <Text style={styles.activeUrlValue} numberOfLines={1}>
+          <View style={[styles.activeUrlBox, { backgroundColor: colors.cardBgSecondary, borderColor: colors.cardBorder }]}>
+            <Cloud size={14} color={colors.primary} />
+            <Text style={[styles.activeUrlLabel, { color: colors.textSecondary }]}>Active Backend URL:</Text>
+            <Text style={[styles.activeUrlValue, { color: colors.textPrimary }]} numberOfLines={1}>
               {serverUrl || "https://neo-copier.duckdns.org"}
             </Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Globe size={18} color="#64748b" style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+            <Globe size={18} color={colors.textMuted} style={styles.inputIcon} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.textPrimary }]}
               value={inputUrl}
               onChangeText={setInputUrl}
               placeholder="e.g. https://neo-copier.duckdns.org"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
             />

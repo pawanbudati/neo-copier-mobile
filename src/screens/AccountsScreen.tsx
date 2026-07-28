@@ -9,6 +9,7 @@ import {
   Switch,
 } from "react-native";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { ApiService } from "../services/api";
 import { AccountModal } from "../components/AccountModal";
 import { UpstoxModal } from "../components/UpstoxModal";
@@ -36,6 +37,8 @@ export const AccountsScreen: React.FC = () => {
     settings,
     updateSettings,
   } = useApp();
+
+  const { isLightTheme, colors } = useTheme();
 
   const [accountModalVisible, setAccountModalVisible] = useState(false);
   const [editingAccount, setEditingAccount] = useState<AccountSummary | null>(null);
@@ -118,43 +121,43 @@ export const AccountsScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Stats Summary Bar */}
       <View style={styles.statsBar}>
-        <View style={styles.statCard}>
-          <Text style={styles.statVal}>{accounts.length}</Text>
-          <Text style={styles.statLabel}>Total Accounts</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+          <Text style={[styles.statVal, { color: colors.textPrimary }]}>{accounts.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Accounts</Text>
         </View>
 
-        <View style={styles.statCard}>
-          <Text style={[styles.statVal, { color: "#f59e0b" }]}>{masterCount}</Text>
-          <Text style={styles.statLabel}>Master</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+          <Text style={[styles.statVal, { color: colors.warning }]}>{masterCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Master</Text>
         </View>
 
-        <View style={styles.statCard}>
-          <Text style={[styles.statVal, { color: "#06b6d4" }]}>{slaveCount}</Text>
-          <Text style={styles.statLabel}>Slaves</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+          <Text style={[styles.statVal, { color: colors.primary }]}>{slaveCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Slaves</Text>
         </View>
       </View>
 
       {/* Margins Summary Header */}
       {margins.length > 0 && (
-        <View style={styles.marginsCard}>
+        <View style={[styles.marginsCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
           <View style={styles.marginCol}>
-            <Text style={styles.marginSubLabel}>Total Cash</Text>
-            <Text style={styles.marginVal}>₹{totalMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</Text>
+            <Text style={[styles.marginSubLabel, { color: colors.textSecondary }]}>Total Cash</Text>
+            <Text style={[styles.marginVal, { color: colors.textPrimary }]}>₹{totalMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</Text>
           </View>
-          <View style={styles.marginDivider} />
+          <View style={[styles.marginDivider, { backgroundColor: colors.cardBorder }]} />
           <View style={styles.marginCol}>
-            <Text style={styles.marginSubLabel}>Available</Text>
-            <Text style={[styles.marginVal, { color: "#10b981" }]}>
+            <Text style={[styles.marginSubLabel, { color: colors.textSecondary }]}>Available</Text>
+            <Text style={[styles.marginVal, { color: colors.success }]}>
               ₹{availMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
             </Text>
           </View>
-          <View style={styles.marginDivider} />
+          <View style={[styles.marginDivider, { backgroundColor: colors.cardBorder }]} />
           <View style={styles.marginCol}>
-            <Text style={styles.marginSubLabel}>Used Margin</Text>
-            <Text style={[styles.marginVal, { color: "#f59e0b" }]}>
+            <Text style={[styles.marginSubLabel, { color: colors.textSecondary }]}>Used Margin</Text>
+            <Text style={[styles.marginVal, { color: colors.warning }]}>
               ₹{usedMarginSum.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
             </Text>
           </View>
@@ -163,15 +166,15 @@ export const AccountsScreen: React.FC = () => {
 
       {/* Account Header & Action */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Kotak Accounts</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Kotak Accounts</Text>
         <View style={styles.headerBtnGroup}>
-          <TouchableOpacity style={styles.loginAllBtn} onPress={handleLoginAll}>
-            <Zap size={14} color="#38bdf8" />
-            <Text style={styles.loginAllText}>Login All</Text>
+          <TouchableOpacity style={[styles.loginAllBtn, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]} onPress={handleLoginAll}>
+            <Zap size={14} color={colors.primary} />
+            <Text style={[styles.loginAllText, { color: colors.primary }]}>Login All</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.addAccountBtn} onPress={handleOpenAdd}>
-            <UserPlus size={14} color="#090d16" />
-            <Text style={styles.addAccountText}>Add</Text>
+          <TouchableOpacity style={[styles.addAccountBtn, { backgroundColor: colors.primary }]} onPress={handleOpenAdd}>
+            <UserPlus size={14} color="#ffffff" />
+            <Text style={[styles.addAccountText, { color: "#ffffff" }]}>Add</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -186,23 +189,23 @@ export const AccountsScreen: React.FC = () => {
           const isActive = item.status === "active";
 
           return (
-            <View style={styles.accountCard}>
+            <View style={[styles.accountCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
               <View style={styles.cardTopRow}>
                 <View style={styles.cardTitleCol}>
                   <View style={styles.nameRow}>
-                    <Text style={styles.accountNickname}>{item.nickname}</Text>
+                    <Text style={[styles.accountNickname, { color: colors.textPrimary }]}>{item.nickname}</Text>
                     <View
                       style={[
                         styles.roleBadge,
-                        { backgroundColor: isMaster ? "rgba(245, 158, 11, 0.2)" : "rgba(6, 182, 212, 0.2)" },
+                        { backgroundColor: isMaster ? colors.warningLight : colors.primaryLight },
                       ]}
                     >
-                      <Text style={[styles.roleBadgeText, { color: isMaster ? "#f59e0b" : "#06b6d4" }]}>
+                      <Text style={[styles.roleBadgeText, { color: isMaster ? colors.warning : colors.primary }]}>
                         {item.role.toUpperCase()}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.accountUcc}>UCC: {item.ucc} • Mobile: {item.mobileNumber}</Text>
+                  <Text style={[styles.accountUcc, { color: colors.textSecondary }]}>UCC: {item.ucc} • Mobile: {item.mobileNumber}</Text>
                 </View>
 
                 <View style={styles.cardStatusCol}>

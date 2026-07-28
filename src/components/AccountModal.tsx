@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Switch } from "react-native";
 import { ApiService } from "../services/api";
+import { useTheme } from "../context/ThemeContext";
 import { AccountSummary } from "../types";
 import { X, UserPlus, Save } from "lucide-react-native";
 
@@ -17,6 +18,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { isLightTheme, colors } = useTheme();
   const [nickname, setNickname] = useState("");
   const [role, setRole] = useState<"master" | "slave">("slave");
   const [mobileNumber, setMobileNumber] = useState("");
@@ -90,27 +92,27 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <UserPlus size={20} color="#06b6d4" />
-              <Text style={styles.headerTitle}>
+              <UserPlus size={20} color={colors.primary} />
+              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
                 {editingAccount ? "Edit Kotak Neo Account" : "Add Kotak Neo Account"}
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.cardBgSecondary }]}>
+              <X size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.scrollForm} showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>Nickname / Alias</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Nickname / Alias</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
               value={nickname}
               onChangeText={setNickname}
               placeholder="e.g. Master Trader"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
             />
 
             <Text style={styles.label}>Account Role</Text>

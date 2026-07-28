@@ -13,6 +13,7 @@ import {
   Animated,
 } from "react-native";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { ApiService } from "../services/api";
 import { OrderPlacementModal } from "../components/OrderPlacementModal";
 import { ScripManagerModal } from "../components/ScripManagerModal";
@@ -59,6 +60,7 @@ const SwipeableWatchlistItem: React.FC<SwipeableWatchlistItemProps> = ({
   onRemove,
 }) => {
   const pan = useRef(new Animated.ValueXY()).current;
+  const { isLightTheme, colors } = useTheme();
 
   const panResponder = useRef(
     PanResponder.create({
@@ -115,7 +117,10 @@ const SwipeableWatchlistItem: React.FC<SwipeableWatchlistItemProps> = ({
       </View>
 
       <Animated.View
-        style={[styles.scripRowCard, { transform: [{ translateX: pan.x }] }]}
+        style={[
+          styles.scripRowCard,
+          { backgroundColor: colors.cardBg, borderColor: colors.cardBorder, transform: [{ translateX: pan.x }] },
+        ]}
         {...panResponder.panHandlers}
       >
         <TouchableOpacity
@@ -124,30 +129,30 @@ const SwipeableWatchlistItem: React.FC<SwipeableWatchlistItemProps> = ({
           onPress={onPress}
         >
           <View style={styles.scripTitleCol}>
-            <Text style={styles.scripSymbol} numberOfLines={1}>
+            <Text style={[styles.scripSymbol, { color: colors.textPrimary }]} numberOfLines={1}>
               {item.scripRefKey || item.tradingSymbol}
             </Text>
-            <Text style={styles.scripSubtitle} numberOfLines={1}>
+            <Text style={[styles.scripSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
               {item.exchange} • Lot: {item.lotSize || 1}{item.expiry ? ` • Exp: ${item.expiry}` : ""}
             </Text>
           </View>
 
           <View style={styles.scripRightGroup}>
             <TouchableOpacity
-              style={styles.iconActionBtn}
+              style={[styles.iconActionBtn, { backgroundColor: colors.cardBgSecondary }]}
               onPress={(e) => {
                 e.stopPropagation();
                 onOpenChart();
               }}
             >
-              <BarChart2 size={15} color="#38bdf8" />
+              <BarChart2 size={15} color={colors.primary} />
             </TouchableOpacity>
 
             <View style={styles.scripPriceCol}>
-              <Text style={styles.scripLtp}>
+              <Text style={[styles.scripLtp, { color: colors.textPrimary }]}>
                 ₹{ltp > 0 ? safeToFixed(ltp) : "--.--"}
               </Text>
-              <Text style={[styles.scripChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
+              <Text style={[styles.scripChange, { color: isUp ? colors.success : colors.danger }]}>
                 {isUp ? `+${safeToFixed(change)} (${safeToFixed(changePct)}%)` : `${safeToFixed(change)} (${safeToFixed(changePct)}%)`}
               </Text>
             </View>
@@ -172,6 +177,8 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
     refreshPositions,
     totalPnl,
   } = useApp();
+
+  const { isLightTheme, colors } = useTheme();
 
   const [activeTab, setActiveTab] = useState<"watchlist" | "positions" | "search">("watchlist");
   const [searchQuery, setSearchQuery] = useState("");
@@ -406,18 +413,18 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
               const existingOco = ocoRules.find((r) => r.symbol === item.symbol);
 
               return (
-                <View style={styles.scripCard}>
+                <View style={[styles.scripCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
                   <View style={styles.scripHeader}>
                     <View style={styles.scripTitleCol}>
-                      <Text style={styles.scripSymbol}>{item.symbol || item.tradingSymbol || "Position"}</Text>
-                      <Text style={styles.scripSubtitle}>
+                      <Text style={[styles.scripSymbol, { color: colors.textPrimary }]}>{item.symbol || item.tradingSymbol || "Position"}</Text>
+                      <Text style={[styles.scripSubtitle, { color: colors.textSecondary }]}>
                         Qty: {netQty} • Avg: ₹{safeToFixed(buyAvg)}
                       </Text>
                     </View>
 
                     <View style={styles.scripPriceCol}>
-                      <Text style={styles.scripLtp}>₹{safeToFixed(liveLtp)}</Text>
-                      <Text style={[styles.scripChange, { color: isProfit ? "#10b981" : "#f43f5e" }]}>
+                      <Text style={[styles.scripLtp, { color: colors.textPrimary }]}>₹{safeToFixed(liveLtp)}</Text>
+                      <Text style={[styles.scripChange, { color: isProfit ? colors.success : colors.danger }]}>
                         {isProfit ? `+₹${safeToFixed(itemTotalPnl)}` : `-₹${safeToFixed(Math.abs(itemTotalPnl))}`}
                       </Text>
                     </View>
@@ -425,32 +432,32 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
 
                   {/* Active OCO Badge */}
                   {existingOco && (
-                    <View style={styles.ocoBadgeRow}>
-                      <Target size={13} color="#06b6d4" />
-                      <Text style={styles.ocoBadgeText}>
+                    <View style={[styles.ocoBadgeRow, { backgroundColor: colors.primaryLight }]}>
+                      <Target size={13} color={colors.primary} />
+                      <Text style={[styles.ocoBadgeText, { color: colors.primary }]}>
                         OCO Target: ₹{existingOco.targetPrice} | SL: ₹{existingOco.stopLossPrice}
                       </Text>
                       <TouchableOpacity onPress={() => deleteOcoRule(existingOco.id)} style={styles.deleteOcoBtn}>
-                        <X size={12} color="#f43f5e" />
+                        <X size={12} color={colors.danger} />
                       </TouchableOpacity>
                     </View>
                   )}
 
                   <View style={styles.cardActions}>
                     <TouchableOpacity
-                      style={styles.chartBtnFlex}
+                      style={[styles.chartBtnFlex, { backgroundColor: colors.cardBgSecondary }]}
                       onPress={() => handleOpenChart({ tradingSymbol: item.symbol })}
                     >
-                      <BarChart2 size={16} color="#38bdf8" />
-                      <Text style={styles.chartBtnText}>Chart</Text>
+                      <BarChart2 size={16} color={colors.primary} />
+                      <Text style={[styles.chartBtnText, { color: colors.primary }]}>Chart</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.ocoBtnFlex}
+                      style={[styles.ocoBtnFlex, { backgroundColor: colors.primaryLight }]}
                       onPress={() => handleOpenOcoModal(item)}
                     >
-                      <Target size={15} color="#06b6d4" />
-                      <Text style={styles.ocoBtnText}>OCO Target/SL</Text>
+                      <Target size={15} color={colors.primary} />
+                      <Text style={[styles.ocoBtnText, { color: colors.primary }]}>OCO Target/SL</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity

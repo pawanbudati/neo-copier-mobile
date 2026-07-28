@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { ApiService } from "../services/api";
 import { ScripInfo } from "../types";
 import {
@@ -58,6 +59,7 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { accounts, quotes, margins, refreshOrders, refreshPositions } = useApp();
+  const { isLightTheme, colors } = useTheme();
 
   const [transactionType, setTransactionType] = useState<"BUY" | "SELL">(initialSide);
   const [symbol, setSymbol] = useState("");
@@ -296,25 +298,25 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
+        <View style={[styles.modalCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder, paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.headerTitle}>Order Ticket</Text>
-              <Text style={styles.headerSubtitle}>{symbol || "Select Scrip"}</Text>
+              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Order Ticket</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.primary }]}>{symbol || "Select Scrip"}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.cardBgSecondary }]}>
+              <X size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
             {/* Live Price / LTP Header Card */}
-            <View style={styles.ltpHeaderCard}>
+            <View style={[styles.ltpHeaderCard, { backgroundColor: colors.cardBgSecondary, borderColor: colors.cardBorder }]}>
               <View style={styles.ltpLeftCol}>
-                <Text style={styles.ltpLabel}>Live LTP</Text>
+                <Text style={[styles.ltpLabel, { color: colors.textSecondary }]}>Live LTP</Text>
                 <View style={styles.ltpPriceRow}>
-                  <Text style={styles.ltpPriceText}>{ltp > 0 ? `₹${fmt(ltp)}` : "₹ --"}</Text>
+                  <Text style={[styles.ltpPriceText, { color: colors.textPrimary }]}>{ltp > 0 ? `₹${fmt(ltp)}` : "₹ --"}</Text>
                   {change !== 0 && (
                     <View style={[styles.changeBadge, { backgroundColor: change >= 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)" }]}>
                       {change >= 0 ? <ArrowUpRight size={13} color="#10b981" /> : <ArrowDownRight size={13} color="#f43f5e" />}

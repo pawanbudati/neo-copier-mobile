@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useTheme } from "../context/ThemeContext";
 import { TerminalScreen } from "../screens/TerminalScreen";
 import { AccountsScreen } from "../screens/AccountsScreen";
 import { OrdersScreen } from "../screens/OrdersScreen";
@@ -20,42 +21,39 @@ const Stack = createNativeStackNavigator();
 function MainTabNavigator({
   onOpenServerConfig,
   onOpenUpstoxConfig,
-  isLightTheme,
-  onToggleTheme,
 }: {
   onOpenServerConfig: () => void;
   onOpenUpstoxConfig: () => void;
-  isLightTheme: boolean;
-  onToggleTheme: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 12);
+  const { isLightTheme, toggleTheme, colors } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.safeContainer, isLightTheme && styles.safeContainerLight]} edges={["top"]}>
+    <SafeAreaView style={[styles.safeContainer, { backgroundColor: colors.headerBg }]} edges={["top"]}>
       <StatusBar
         barStyle={isLightTheme ? "dark-content" : "light-content"}
-        backgroundColor={isLightTheme ? "#ffffff" : "#0f172a"}
+        backgroundColor={colors.headerBg}
         translucent={false}
       />
       <AppHeader
         onOpenServerConfig={onOpenServerConfig}
         onOpenUpstoxConfig={onOpenUpstoxConfig}
         isLightTheme={isLightTheme}
-        onToggleTheme={onToggleTheme}
+        onToggleTheme={toggleTheme}
       />
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: isLightTheme ? "#ffffff" : "#0f172a",
-            borderTopColor: isLightTheme ? "#e2e8f0" : "#1e293b",
+            backgroundColor: colors.tabBarBg,
+            borderTopColor: colors.tabBarBorder,
             height: 56 + bottomInset,
             paddingBottom: bottomInset,
             paddingTop: 6,
           },
-          tabBarActiveTintColor: "#06b6d4",
-          tabBarInactiveTintColor: isLightTheme ? "#94a3b8" : "#64748b",
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: "700",
@@ -102,7 +100,6 @@ function MainTabNavigator({
 export function AppNavigator() {
   const [serverModalVisible, setServerModalVisible] = useState(false);
   const [upstoxModalVisible, setUpstoxModalVisible] = useState(false);
-  const [isLightTheme, setIsLightTheme] = useState(false);
 
   return (
     <NavigationContainer>
@@ -113,8 +110,6 @@ export function AppNavigator() {
               {...props}
               onOpenServerConfig={() => setServerModalVisible(true)}
               onOpenUpstoxConfig={() => setUpstoxModalVisible(true)}
-              isLightTheme={isLightTheme}
-              onToggleTheme={() => setIsLightTheme((prev) => !prev)}
             />
           )}
         </Stack.Screen>
@@ -137,9 +132,5 @@ export function AppNavigator() {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: "#0f172a",
-  },
-  safeContainerLight: {
-    backgroundColor: "#ffffff",
   },
 });

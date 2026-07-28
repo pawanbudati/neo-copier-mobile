@@ -8,6 +8,7 @@ import {
   TextInput,
 } from "react-native";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { SystemLog } from "../types";
 import { ApiService } from "../services/api";
 import {
@@ -22,6 +23,7 @@ import { Alert } from "react-native";
 
 export const LogsScreen: React.FC = () => {
   const { logs, refreshLogs } = useApp();
+  const { isLightTheme, colors } = useTheme();
 
   const [selectedLevel, setSelectedLevel] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,17 +71,17 @@ export const LogsScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Controls Bar */}
-      <View style={styles.controlsBar}>
-        <View style={styles.searchBar}>
-          <Search size={16} color="#64748b" style={styles.searchIcon} />
+      <View style={[styles.controlsBar, { backgroundColor: colors.cardBg, borderBottomColor: colors.cardBorder }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+          <Search size={16} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textPrimary }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Filter log messages..."
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.textMuted}
           />
         </View>
 
@@ -92,10 +94,14 @@ export const LogsScreen: React.FC = () => {
             contentContainerStyle={styles.levelChips}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={[styles.levelChip, selectedLevel === item && styles.activeChip]}
+                style={[
+                  styles.levelChip,
+                  { backgroundColor: colors.cardBgSecondary, borderColor: colors.cardBorder },
+                  selectedLevel === item && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                ]}
                 onPress={() => setSelectedLevel(item)}
               >
-                <Text style={[styles.chipText, selectedLevel === item && styles.activeChipText]}>
+                <Text style={[styles.chipText, { color: colors.textSecondary }, selectedLevel === item && { color: colors.primary, fontWeight: "800" }]}>
                   {item}
                 </Text>
               </TouchableOpacity>
@@ -103,18 +109,18 @@ export const LogsScreen: React.FC = () => {
           />
 
           <TouchableOpacity
-            style={[styles.pauseBtn, paused && styles.activePauseBtn]}
+            style={[styles.pauseBtn, { backgroundColor: colors.cardBgSecondary, borderColor: colors.cardBorder }, paused && { backgroundColor: colors.successLight, borderColor: colors.success }]}
             onPress={() => setPaused(!paused)}
           >
-            {paused ? <Play size={14} color="#10b981" /> : <Pause size={14} color="#94a3b8" />}
+            {paused ? <Play size={14} color={colors.success} /> : <Pause size={14} color={colors.textMuted} />}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.refreshBtn} onPress={refreshLogs}>
-            <RefreshCw size={14} color="#06b6d4" />
+          <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: colors.primaryLight }]} onPress={refreshLogs}>
+            <RefreshCw size={14} color={colors.primary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteBtn} onPress={handleClearLogs}>
-            <Trash2 size={14} color="#f43f5e" />
+          <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: colors.dangerLight }]} onPress={handleClearLogs}>
+            <Trash2 size={14} color={colors.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -125,18 +131,18 @@ export const LogsScreen: React.FC = () => {
         keyExtractor={(item, index) => item.id || String(index)}
         contentContainerStyle={styles.logList}
         renderItem={({ item }) => (
-          <View style={styles.logRow}>
-            <Text style={styles.timestamp}>
+          <View style={[styles.logRow, { borderBottomColor: colors.cardBorder }]}>
+            <Text style={[styles.timestamp, { color: colors.textMuted }]}>
               {item.timestamp ? item.timestamp.split("T")[1]?.slice(0, 8) : "--:--:--"}
             </Text>
             {getLevelBadge(item.level)}
-            <Text style={styles.logMessage}>{item.message}</Text>
+            <Text style={[styles.logMessage, { color: colors.textPrimary }]}>{item.message}</Text>
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Terminal size={36} color="#334155" />
-            <Text style={styles.emptyText}>No System Logs Available</Text>
+            <Terminal size={36} color={colors.cardBorder} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No System Logs Available</Text>
           </View>
         }
       />

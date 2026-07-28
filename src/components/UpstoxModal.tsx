@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert } from "react-native";
 import { ApiService } from "../services/api";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 import { X, ShieldCheck, ExternalLink, KeyRound } from "lucide-react-native";
 
 interface UpstoxModalProps {
@@ -11,6 +12,7 @@ interface UpstoxModalProps {
 
 export const UpstoxModal: React.FC<UpstoxModalProps> = ({ visible, onClose }) => {
   const { upstoxConnected, upstoxAuthUrl, refreshUpstoxStatus } = useApp();
+  const { isLightTheme, colors } = useTheme();
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [redirectUri, setRedirectUri] = useState("");
@@ -73,41 +75,41 @@ export const UpstoxModal: React.FC<UpstoxModalProps> = ({ visible, onClose }) =>
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <ShieldCheck size={20} color="#38bdf8" />
-              <Text style={styles.headerTitle}>Upstox API Integration</Text>
+              <ShieldCheck size={20} color={colors.primary} />
+              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Upstox API Integration</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+            <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.cardBgSecondary }]}>
+              <X size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.statusBox}>
-            <Text style={styles.statusText}>Connection Status:</Text>
-            <Text style={[styles.statusBadge, { color: upstoxConnected ? "#10b981" : "#f43f5e" }]}>
+          <View style={[styles.statusBox, { backgroundColor: colors.cardBgSecondary, borderColor: colors.cardBorder }]}>
+            <Text style={[styles.statusText, { color: colors.textSecondary }]}>Connection Status:</Text>
+            <Text style={[styles.statusBadge, { color: upstoxConnected ? colors.success : colors.danger }]}>
               {upstoxConnected ? "AUTHENTICATED" : "NOT AUTHENTICATED"}
             </Text>
           </View>
 
-          <Text style={styles.label}>Upstox API Key</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Upstox API Key</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
             value={apiKey}
             onChangeText={setApiKey}
             placeholder="Upstox API Key"
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.textMuted}
           />
 
-          <Text style={styles.label}>Upstox API Secret</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Upstox API Secret</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
             value={apiSecret}
             onChangeText={setApiSecret}
             secureTextEntry
             placeholder="Upstox API Secret"
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.textMuted}
           />
 
           <TouchableOpacity style={styles.saveKeysBtn} onPress={handleSaveCredentials} disabled={submitting}>
