@@ -117,16 +117,31 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
     }
   }, [orderType, ltp]);
 
-  // Live Broker Margin Calculation (Debounced 300ms)
+  // Keep track of margin call in-flight & last execution timestamp for MARKET order 4sec throttling
+  const isFetchingMargin = React.useRef<boolean>(false);
+  const lastMarketMarginTime = React.useRef<number>(0);
+
+  // Live Broker Margin Calculation (Debounced 300ms for user input changes)
   useEffect(() => {
     if (!visible || !symbol.trim()) return;
     const qtyNum = parseInt(quantity, 10) || 0;
     if (qtyNum <= 0) return;
 
-    let active = true;
-    setCalculatingMargin(true);
-
     const priceVal = orderType === "MARKET" ? ltp : parseFloat(price) || 0;
+    if (orderType === "MARKET" && priceVal <= 0) return;
+
+    let active = true;
+
+    // Throttle for MARKET orders to at most once per 4 seconds
+    if (orderType === "MARKET") {
+      const now = Date.now();
+      if (isFetchingMargin.current || (now - lastMarketMarginTime.current < 4000)) {
+        return;
+      }
+    }
+
+    isFetchingMargin.current = true;
+    setCalculatingMargin(true);
 
     const timer = setTimeout(() => {
       ApiService.calculateMarginRequired({
@@ -151,15 +166,62 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
           if (active) setMarginData(null);
         })
         .finally(() => {
-          if (active) setCalculatingMargin(false);
+          if (active) {
+            setCalculatingMargin(false);
+            isFetchingMargin.current = false;
+            lastMarketMarginTime.current = Date.now();
+          }
         });
-    }, 300);
+    }, orderType === "MARKET" ? 0 : 300);
 
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [symbol, quantity, price, triggerPrice, productType, orderType, transactionType, visible, ltp]);
+  }, [symbol, quantity, price, triggerPrice, productType, orderType, transactionType, visible]);
+
+  // Periodic 4-second refresh for MARKET orders
+  useEffect(() => {
+    if (!visible || orderType !== "MARKET" || !symbol.trim()) return;
+
+    const interval = setInterval(() => {
+      const qtyNum = parseInt(quantity, 10) || 0;
+      if (qtyNum <= 0 || ltp <= 0) return;
+
+      const now = Date.now();
+      if (isFetchingMargin.current || (now - lastMarketMarginTime.current < 4000)) {
+        return;
+      }
+
+      isFetchingMargin.current = true;
+      setCalculatingMargin(true);
+
+      ApiService.calculateMarginRequired({
+        scriptToken: token || initialScrip?.scriptToken || symbol.trim().toUpperCase(),
+        instrumentToken: token || initialScrip?.scriptToken || symbol.trim().toUpperCase(),
+        exchange: initialScrip?.exchange || "NFO",
+        segment: initialScrip?.segment || "NFO",
+        symbol: symbol.trim().toUpperCase(),
+        quantity: qtyNum,
+        price: ltp,
+        triggerPrice: parseFloat(triggerPrice) || 0,
+        product: productType,
+        orderType: "MARKET",
+        transactionType,
+      })
+        .then((data) => {
+          if (data) setMarginData(data);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setCalculatingMargin(false);
+          isFetchingMargin.current = false;
+          lastMarketMarginTime.current = Date.now();
+        });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [visible, orderType, symbol, quantity, triggerPrice, productType, transactionType, ltp, token, initialScrip]);
 
   const masterAcc = accounts.find((a) => a.role === "master");
   const slaveAccs = accounts.filter((a) => a.role === "slave" && a.status === "active");
