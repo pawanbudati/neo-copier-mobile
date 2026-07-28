@@ -338,40 +338,136 @@ export const OrderPlacementModal: React.FC<OrderPlacementModalProps> = ({
               ))}
             </View>
 
-            {/* Quantity & Price Row */}
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <Text style={styles.fieldLabel}>Quantity</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={quantity}
-                  onChangeText={setQuantity}
-                  keyboardType="numeric"
-                />
-              </View>
+            {/* Quantity Controls (Multiples of Lot Size) */}
+            {(() => {
+              const lotSize = initialScrip?.lotSize && initialScrip.lotSize > 0 ? initialScrip.lotSize : 15;
+              const currentQty = parseInt(quantity, 10) || lotSize;
+              const lotCount = Math.max(1, Math.round(currentQty / lotSize));
 
-              {orderType !== "MARKET" && (
-                <View style={styles.flex1}>
-                  <Text style={styles.fieldLabel}>Limit Price (₹)</Text>
+              return (
+                <View style={styles.fieldGroup}>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.fieldLabel}>Quantity (Lot Size: {lotSize})</Text>
+                    <Text style={styles.lotBadgeText}>{lotCount} Lot(s)</Text>
+                  </View>
+
+                  <View style={styles.stepperContainer}>
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={() => {
+                        const next = Math.max(lotSize, currentQty - lotSize);
+                        setQuantity(String(next));
+                      }}
+                    >
+                      <Text style={styles.stepperBtnText}>-</Text>
+                    </TouchableOpacity>
+
+                    <TextInput
+                      style={[styles.textInput, styles.stepperInput]}
+                      value={quantity}
+                      onChangeText={setQuantity}
+                      keyboardType="numeric"
+                    />
+
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={() => {
+                        const next = currentQty + lotSize;
+                        setQuantity(String(next));
+                      }}
+                    >
+                      <Text style={styles.stepperBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Quick Lot Multiplier Chips */}
+                  <View style={styles.quickLotRow}>
+                    {[1, 2, 3, 4, 5].map((multiplier) => {
+                      const targetQty = lotSize * multiplier;
+                      const isSelected = currentQty === targetQty;
+                      return (
+                        <TouchableOpacity
+                          key={multiplier}
+                          style={[styles.quickLotChip, isSelected && styles.quickLotChipActive]}
+                          onPress={() => setQuantity(String(targetQty))}
+                        >
+                          <Text style={[styles.quickLotText, isSelected && styles.quickLotTextActive]}>
+                            {multiplier}x ({targetQty})
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Price Inputs */}
+            {orderType !== "MARKET" && (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Limit Price (₹)</Text>
+                <View style={styles.stepperContainer}>
+                  <TouchableOpacity
+                    style={styles.stepperBtn}
+                    onPress={() => {
+                      const curr = parseFloat(price) || 0;
+                      setPrice(Math.max(0, (curr - 0.05)).toFixed(2));
+                    }}
+                  >
+                    <Text style={styles.stepperBtnText}>-</Text>
+                  </TouchableOpacity>
+
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, styles.stepperInput]}
                     value={price}
                     onChangeText={setPrice}
                     keyboardType="numeric"
                   />
+
+                  <TouchableOpacity
+                    style={styles.stepperBtn}
+                    onPress={() => {
+                      const curr = parseFloat(price) || 0;
+                      setPrice((curr + 0.05).toFixed(2));
+                    }}
+                  >
+                    <Text style={styles.stepperBtnText}>+</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            </View>
+              </View>
+            )}
 
             {orderType === "SL" && (
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Trigger Price (₹)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={triggerPrice}
-                  onChangeText={setTriggerPrice}
-                  keyboardType="numeric"
-                />
+                <View style={styles.stepperContainer}>
+                  <TouchableOpacity
+                    style={styles.stepperBtn}
+                    onPress={() => {
+                      const curr = parseFloat(triggerPrice) || 0;
+                      setTriggerPrice(Math.max(0, (curr - 0.05)).toFixed(2));
+                    }}
+                  >
+                    <Text style={styles.stepperBtnText}>-</Text>
+                  </TouchableOpacity>
+
+                  <TextInput
+                    style={[styles.textInput, styles.stepperInput]}
+                    value={triggerPrice}
+                    onChangeText={setTriggerPrice}
+                    keyboardType="numeric"
+                  />
+
+                  <TouchableOpacity
+                    style={styles.stepperBtn}
+                    onPress={() => {
+                      const curr = parseFloat(triggerPrice) || 0;
+                      setTriggerPrice((curr + 0.05).toFixed(2));
+                    }}
+                  >
+                    <Text style={styles.stepperBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
@@ -925,5 +1021,66 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     color: "#090d16",
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  lotBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#38bdf8",
+  },
+  stepperContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  stepperBtn: {
+    width: 44,
+    height: 44,
+    backgroundColor: "#1e293b",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperBtnText: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#38bdf8",
+  },
+  stepperInput: {
+    flex: 1,
+    textAlign: "center",
+  },
+  quickLotRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  quickLotChip: {
+    backgroundColor: "#1e293b",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  quickLotChipActive: {
+    backgroundColor: "rgba(6, 182, 212, 0.2)",
+    borderColor: "#06b6d4",
+  },
+  quickLotText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#94a3b8",
+  },
+  quickLotTextActive: {
+    color: "#38bdf8",
+    fontWeight: "800",
   },
 });
