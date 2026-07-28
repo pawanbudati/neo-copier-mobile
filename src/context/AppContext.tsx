@@ -49,6 +49,7 @@ interface AppContextType {
   updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
 
   quotes: Record<string, QuoteData>;
+  subscribeToTokens: (tokens: string[]) => Promise<void>;
   logs: SystemLog[];
   refreshLogs: () => Promise<void>;
 
@@ -521,6 +522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         settings,
         updateSettings,
         quotes,
+        subscribeToTokens,
         logs,
         refreshLogs,
         totalPnl,

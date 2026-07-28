@@ -128,7 +128,7 @@ const SwipeableWatchlistItem: React.FC<SwipeableWatchlistItemProps> = ({
               {item.scripRefKey || item.tradingSymbol}
             </Text>
             <Text style={styles.scripSubtitle} numberOfLines={1}>
-              {item.exchange} • {item.segment} • Lot: {item.lotSize || 1}
+              {item.exchange} • Lot: {item.lotSize || 1}{item.expiry ? ` • Exp: ${item.expiry}` : ""}
             </Text>
           </View>
 
@@ -163,6 +163,7 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
     watchlist,
     positions,
     quotes,
+    subscribeToTokens,
     ocoRules,
     createOcoRule,
     deleteOcoRule,
@@ -245,7 +246,13 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
     setIsSearching(true);
     try {
       const results = await ApiService.searchScrips(query.trim());
-      if (Array.isArray(results)) setSearchResults(results);
+      if (Array.isArray(results)) {
+        setSearchResults(results);
+        const tokensToSub = results.map((r: any) => r.scriptToken || r.tradingSymbol || r.scripRefKey).filter(Boolean);
+        if (tokensToSub.length > 0) {
+          subscribeToTokens(tokensToSub);
+        }
+      }
     } catch (e) {
       console.warn("Search failed", e);
     } finally {
@@ -486,35 +493,51 @@ export const TerminalScreen: React.FC<TerminalScreenProps> = ({ navigation }) =>
             data={searchResults}
             keyExtractor={(item, idx) => String(item.scriptToken || item.tradingSymbol || idx)}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.scripRowCard}
-                activeOpacity={0.7}
-                onPress={() => handleOpenOrder(item, "BUY")}
-              >
-                <View style={styles.scripTitleCol}>
-                  <Text style={styles.scripSymbol} numberOfLines={1}>
-                    {item.scripRefKey || item.tradingSymbol}
-                  </Text>
-                  <Text style={styles.scripSubtitle} numberOfLines={1}>
-                    {item.exchange} • {item.segment} • Lot: {item.lotSize}
-                  </Text>
-                </View>
+            renderItem={({ item }) => {
+              const liveQuote = quotes[item.scriptToken] || quotes[item.tradingSymbol] || quotes[item.scripRefKey];
+              const ltp = liveQuote?.ltp ?? 0;
+              const change = liveQuote?.change ?? 0;
+              const changePct = liveQuote?.changePct ?? liveQuote?.pChange ?? 0;
+              const isUp = change >= 0;
 
-                <View style={styles.scripRightGroup}>
-                  <TouchableOpacity
-                    style={styles.addWatchlistBtn}
-                    onPress={() => {
-                      addToWatchlist(item);
-                      showToast(`${item.tradingSymbol || item.scripRefKey} added to watchlist`, "success");
-                    }}
-                  >
-                    <Plus size={15} color="#06b6d4" />
-                    <Text style={styles.addWatchlistText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            )}
+              return (
+                <TouchableOpacity
+                  style={styles.scripRowCard}
+                  activeOpacity={0.7}
+                  onPress={() => handleOpenOrder(item, "BUY")}
+                >
+                  <View style={styles.scripTitleCol}>
+                    <Text style={styles.scripSymbol} numberOfLines={1}>
+                      {item.scripRefKey || item.tradingSymbol}
+                    </Text>
+                    <Text style={styles.scripSubtitle} numberOfLines={1}>
+                      {item.exchange} • Lot: {item.lotSize}{item.expiry ? ` • Exp: ${item.expiry}` : ""}
+                    </Text>
+                  </View>
+
+                  <View style={styles.scripRightGroup}>
+                    {ltp > 0 && (
+                      <View style={styles.scripPriceCol}>
+                        <Text style={styles.scripLtp}>₹{safeToFixed(ltp)}</Text>
+                        <Text style={[styles.scripChange, { color: isUp ? "#10b981" : "#f43f5e" }]}>
+                          {isUp ? "+" : ""}{safeToFixed(change)} ({isUp ? "+" : ""}{changePct.toFixed(2)}%)
+                        </Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.addWatchlistBtn}
+                      onPress={() => {
+                        addToWatchlist(item);
+                        showToast(`${item.tradingSymbol || item.scripRefKey} added to watchlist`, "success");
+                      }}
+                    >
+                      <Plus size={15} color="#06b6d4" />
+                      <Text style={styles.addWatchlistText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
           />
         </View>
       )}
